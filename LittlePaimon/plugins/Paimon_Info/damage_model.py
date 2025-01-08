@@ -15,6 +15,7 @@ def udc(dm: float,
         rcb: Optional[float] = 0.1,
         rcd: Optional[float] = 0,
         el: Optional[int] = 90,
+        gh: Optional[int] = 0,
         dcr: Optional[float] = 0,
         dci: Optional[float] = 0,
         r: Optional[float] = 1,
@@ -28,23 +29,20 @@ def udc(dm: float,
     :param rcb: 怪物基础抗性
     :param rcd: 抗性减少
     :param el: 怪物等级
+    :param gh: 增幅反应
     :param dcr: 抗性系数减少
     :param dci: 无视防御系数
     :param r: 反应最终系数
     :return: 伤害
     """
     if crit[0] > 1:
-        damage = dm * (1 + crit[1]) * (1 + db) * resistance_coefficient(rcb, rcd) * defense_coefficient(sl, el, dcr,
-                                                                                                        dci) * r
+        damage = dm * (1 + crit[1]) * (1 + db) * resistance_coefficient(rcb, rcd) * defense_coefficient(sl, el, dcr, dci) * r * gh
         return [str(int(damage)), str(int(damage))]
     elif crit[0] <= 0:
         damage = dm * (1 + db) * resistance_coefficient(rcb, rcd) * defense_coefficient(sl, el, dcr, dci) * r
         return [str(int(damage)), ]
     else:
-        damage = dm * (1 + crit[0] * crit[1]) * (1 + db) * resistance_coefficient(rcb, rcd) * defense_coefficient(sl,
-                                                                                                                  el,
-                                                                                                                  dcr,
-                                                                                                                  dci) * r
+        damage = dm * (1 * crit[1]) * (1 + db) * resistance_coefficient(rcb, rcd) * defense_coefficient(sl, el, dcr, dci) * r * (1 + gh)
         return [str(int(damage)), str(int(damage / (1 + crit[0] * crit[1]) * (1 + crit[1])))]
 
 
@@ -88,6 +86,15 @@ def growth_reaction(mastery: int = 0, base_coefficient: float = 1.5, extra_coeff
     """
     mastery_increase = (2.78 * mastery) / (mastery + 1400)
     return base_coefficient * (1 + mastery_increase + extra_coefficient)
+
+
+def growth_damage(mastery: int = 0):
+    """
+    计算增幅反应的系数
+    :param mastery: 元素精通
+    :return: 增幅系数
+    """
+    return (2.78 * mastery) / (mastery + 1400)
 
 
 upheaval_value = load_json(JSON_DATA / 'upheaval.json')
@@ -415,6 +422,10 @@ def weapon_common_fix(info: Character):
     elif info.weapon.name == '魔导绪论':
         for i in info.prop.dmg_bonus:
             info.prop.dmg_bonus[i] = info.prop.dmg_bonus[i] + 0.09 + 0.03 * info.weapon.affix_level
+    elif info.weapon.name == '冲浪时光':
+        extra_a['普攻增伤'] += 0.48
+        info.prop.extra_attack = info.prop.health * (0.2 * 0.6 * info.weapon.affix_level)
+        info.damage_describe.append('水球满层')
 
     # 系列武器
     elif info.weapon.name.startswith('千岩'):
@@ -559,6 +570,9 @@ def common_fix(info: Character) -> Tuple[Character, dict, dict, dict]:
             extra_e['减抗'] += 0.3
             extra_q['减抗'] += 0.3
             info.damage_describe.append('草套减抗')
+        elif suit[0][0] == '黑曜秘典':
+            info.prop.crit_damage += 0.4
+            info.damage_describe.append('黑曜套算40%暴击')
     return info, extra_q, extra_e, extra_a
 
 
@@ -580,7 +594,7 @@ def get_damage_multipiler(info: Character) -> Optional[Dict[str, any]]:
     if info.name == '钟离':
         return {
             '玉璋护盾': (float(skill_data['元素战技·地心']['数值']['护盾附加吸收量'][level_e].replace('%最大生命值', '')) / 100.0,
-                     int(skill_data['元素战技·地心']['数值']['护盾基础吸收量'][level_e].replace(',', ''))),
+                         int(skill_data['元素战技·地心']['数值']['护盾基础吸收量'][level_e].replace(',', ''))),
             '原岩共鸣': float(skill_data['元素战技·地心']['数值']['岩脊伤害/共鸣伤害'][level_e].split('/')[1].replace('%', '')) / 100.0,
             '天星':   float(skill_data['元素爆发·天星']['数值']['技能伤害'][level_q].replace('%', '')) / 100.0,
             '踢枪':   float(skill_data['普通攻击·岩雨']['数值']['五段伤害'][level_a].replace('%×4', '')) / 100.0
@@ -703,7 +717,7 @@ def get_damage_multipiler(info: Character) -> Optional[Dict[str, any]]:
         dm['B:c4-增伤-*'] = (0.25, '四命满层')
         dm['B:c1-减抗-*'] = (0.15,)
         dm['AZ-e冰:霜华矢'] = (float(skill_data['普通攻击·流天射术']['数值']['霜华矢命中伤害'][level_a].replace('%', '')) / 100.0,
-                           float(skill_data['普通攻击·流天射术']['数值']['霜华矢·霜华绽发伤害'][level_a].replace('%', '')) / 100.0)
+                               float(skill_data['普通攻击·流天射术']['数值']['霜华矢·霜华绽发伤害'][level_a].replace('%', '')) / 100.0)
         dm['AZ-r融化1.5-e冰:霜华矢融化'] = dm['AZ-e冰:霜华矢']
         dm['E-e冰:元素战技'] = float(skill_data['山泽麟迹']['数值']['技能伤害'][level_e].replace('%', '')) / 100.0
         dm['Q-e冰:冰棱伤害'] = float(skill_data['降众天华']['数值']['冰棱伤害'][level_q].replace('%', '')) / 100.0
@@ -773,11 +787,11 @@ def get_damage_multipiler(info: Character) -> Optional[Dict[str, any]]:
         return {
             'B:l1-攻击力':   (
                 (float(skill_data['大扫除']['数值']['攻击力提高'][level_q].replace('%防御力',
-                                                                         '')) / 100.0 + extra) * info.prop.defense,),
+                                                                                   '')) / 100.0 + extra) * info.prop.defense,),
             'A-e岩:普攻第一段': float(skill_data['普通攻击·西风剑术·女仆']['数值']['一段伤害'][level_a].replace('%', '')) / 100.0,
             'T:Q攻击力提高:':  int(
                 (float(skill_data['大扫除']['数值']['攻击力提高'][level_q].replace('%防御力',
-                                                                         '')) / 100.0 + extra) * info.prop.defense),
+                                                                                   '')) / 100.0 + extra) * info.prop.defense),
             'T:E盾值':      int(float(e[0].replace('%防御力', '')) / 100.0 * info.prop.defense + float(e[1]) * 1.5),
             'T:普攻治疗量/概率': str(int((float(ez[0].replace('%防御力', '')) / 100.0 * info.prop.defense + float(ez[1])) * (
                     1 + info.prop.healing_bonus))) + '/' + skill_data['护心铠']['数值']['治疗触发几率'][level_e]
@@ -799,7 +813,7 @@ def get_damage_multipiler(info: Character) -> Optional[Dict[str, any]]:
             'B:l70-额外倍率-AZ': (0.35 * info.prop.defense,),
             'B:c6-暴击伤害-AZ':  (0.7,),
             'B:l1-攻击力':      (
-            float(skill_data['最恶鬼王·一斗轰临！！']['数值']['攻击力提高'][level_q].replace('%防御力', '')) / 100.0 * info.prop.defense,),
+                float(skill_data['最恶鬼王·一斗轰临！！']['数值']['攻击力提高'][level_q].replace('%防御力', '')) / 100.0 * info.prop.defense,),
             'AZ-e岩:荒泷逆袈裟连斩': float(skill_data['普通攻击·喧哗屋传说']['数值']['荒泷逆袈裟连斩伤害'][level_a].replace('%', '')) / 100.0,
             'E-e岩:赤牛发破':     float(skill_data['魔杀绝技·赤牛发破！']['数值']['技能伤害'][level_e].replace('%', '')) / 100.0,
         }
@@ -931,13 +945,13 @@ def get_damage_multipiler(info: Character) -> Optional[Dict[str, any]]:
             'E-e冰:E释放伤害': float(skill_data['仙法·寒病鬼差']['数值']['技能伤害'][level_e].replace('%', '')) / 100.0,
             'T:开E后普攻治疗量': int(
                 (float(a_rec[0].replace('%攻击力', '')) / 100.0 * info.prop.attack + int(a_rec[1])) * (
-                            1 + info.prop.healing_bonus)),
+                        1 + info.prop.healing_bonus)),
             'T:E持续治疗量':   int(
                 (float(e_rec[0].replace('%攻击力', '')) / 100.0 * info.prop.attack + int(e_rec[1])) * (
-                            1 + info.prop.healing_bonus)),
+                        1 + info.prop.healing_bonus)),
             'T:挂符每次治疗量':  int(
                 (float(q_rec[0].replace('%攻击力', '')) / 100.0 * info.prop.attack + int(q_rec[1])) * (
-                            1 + info.prop.healing_bonus)),
+                        1 + info.prop.healing_bonus)),
             'Q-e冰:大招伤害':  float(skill_data['仙法·救苦度厄']['数值']['技能伤害'][level_q].replace('%', '')) / 100.0,
         }
     if info.name == '提纳里':
@@ -992,11 +1006,22 @@ def get_damage_multipiler(info: Character) -> Optional[Dict[str, any]]:
             'B:l70-增伤-E': (0.8 if info.prop.elemental_mastery >= 1000 else (
                     0.001 * (info.prop.elemental_mastery - 200)) if info.prop.elemental_mastery >= 200 else 0, ),
             'B:l70-暴击率-E': (0.24 if info.prop.elemental_mastery >= 1000 else (
-                        0.0003 * (info.prop.elemental_mastery - 200)) if info.prop.elemental_mastery >= 200 else 0,),
+                    0.0003 * (info.prop.elemental_mastery - 200)) if info.prop.elemental_mastery >= 200 else 0,),
             'B:c2-减防-*': (0.3, '二命减防'),
             'B:l0-额外倍率-E': (float(eb[1].replace('%元素精通', '')) / 100.0 * info.prop.elemental_mastery, ),
             'E-e草:灭净三业': float(eb[0].replace('%攻击力', '')) / 100.0,
             'E-e草-j蔓激化:灭净三业蔓激化': float(eb[0].replace('%攻击力', '')) / 100.0
+        }
+    if info.name == '玛拉妮':
+        return {
+            '战技倍率':
+                (float(skill_data['踏鲨破浪']['数值']['鲨鲨撕咬基础伤害'][level_e].replace('%生命值上限', '')) +
+                 float(skill_data['踏鲨破浪']['数值']['浪势充能伤害提升'][level_e].replace('%生命值上限/层', '')) * 3 +
+                 float(skill_data['踏鲨破浪']['数值']['巨浪鲨鲨撕咬伤害额外提升'][level_e].replace('%生命值上限', '')))
+                / 100.0
+            ,
+            '大招倍率':    float(skill_data['爆瀑飞弹']['数值']['技能伤害'][level_q].replace('%生命值上限', '')) / 100.0 * 3,
+            '天赋增伤':    float(info.prop.health * 0.45)
         }
 
 

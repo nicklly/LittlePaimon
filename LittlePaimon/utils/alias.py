@@ -160,7 +160,6 @@ def get_artifact_icon(name: str) -> Optional[str]:
             return k
         
 
-
 def get_constellation_icon(name: str) -> Optional[str]:
     icon_list = load_json(JSON_DATA / 'role_talent.json')
     for k, v in icon_list['Name'].items():

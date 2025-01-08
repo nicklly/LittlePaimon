@@ -365,6 +365,12 @@ other_form = Form(
             placeholder='请填写早报60s的API地址',
             labelRemark=Remark(shape='circle', content='修改早报60s的API地址，不填则使用默认地址')
         ),
+        InputText(
+            lambel='角色图鉴地址',
+            name='角色图鉴资源链接',
+            value='${角色图鉴链接}',
+            placeholder='请填写早报60s的API地址',
+        ),
         Select(
             label='github资源地址',
             name='github资源地址',

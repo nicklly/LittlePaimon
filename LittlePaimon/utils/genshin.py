@@ -1,15 +1,16 @@
 import asyncio
 import datetime
-from typing import Optional, List, Union, Tuple
+from typing import Optional, List, Union, Tuple, Dict, Any
 
 import pytz
 
 from LittlePaimon.config import config
-from LittlePaimon.database import Artifact, CharacterProperty, Artifacts, Talents, Talent
+from LittlePaimon.database import Artifact, CharacterProperty, Artifacts, Talents, Talent, PlayerInfo, Character
 from LittlePaimon.database import PlayerInfo, Character, LastQuery, PrivateCookie, AbyssInfo
 from .alias import get_name_by_id
-from .api import get_enka_data, get_mihoyo_public_data, get_mihoyo_private_data
+from .api import get_enka_data, get_mihoyo_public_data, get_mihoyo_private_data, get_abyss_info
 from .files import load_json
+from .image import PMImage
 from .logger import logger
 from .path import JSON_DATA
 from .typing import CHARACTERS
@@ -35,7 +36,7 @@ class GenshinInfoManager:
         """
         return await PrivateCookie.filter(user_id=self.user_id, uid=self.uid).exists()
 
-    async def update_all(self, include_talent: bool = False) -> str:
+    async def update_all(self, include_talent: bool = False):
         """
         更新所有原神信息
         """
@@ -43,6 +44,7 @@ class GenshinInfoManager:
         await LastQuery.update_last_query(self.user_id, self.uid)
         mihoyo_result = await self.update_from_mihoyo()
         result += f'米游社数据：{mihoyo_result}\n'
+        logger.success(f'米游社数据：{mihoyo_result}')
 
         if include_talent:
             if await self.is_bind():
@@ -52,10 +54,14 @@ class GenshinInfoManager:
                 result += '天赋数据：未绑定私人Cookie\n'
 
         enka_result = await self.update_from_enka()
-        result += f'Enka数据：{enka_result}'
-        return result or enka_result
+        # result += f'Enka数据：{enka_result}'
+        result += f'{enka_result}'
+        if '更新成功' in enka_result['msg']:
+            return enka_result['data']
+            # return await self.get_player_info()
+        return result or enka_result['data']
 
-    async def update_from_enka(self) -> str:
+    async def update_from_enka(self):
         """
         从enka.network更新原神数据
             :return: 更新结果
@@ -63,15 +69,27 @@ class GenshinInfoManager:
         data = await get_enka_data(self.uid)
         if not data:
             logger.info('原神信息', f'无法获取到<m>{self.uid}</m>的数据，可能是<r>Enka.Network接口服务出现问题</r>')
-            return '无法从Enka.Network获取该uid的信息，可能是接口服务出现问题，请稍候再试'
+            # return '更新失败,无法从Enka.Network获取该uid的信息，可能是接口服务出现问题，请稍候再试'
+            return {
+                "msg": '更新成功',
+                "data": '无法从Enka.Network获取该uid的信息，可能是接口服务出现问题，请稍候再试'
+            }
         await PlayerInfo.update_info(self.user_id, self.uid, data['playerInfo'], 'enka')
+
         if 'avatarInfoList' not in data:
-            return '未在游戏中打开角色展柜，请打开后3分钟后再试'
+            return {
+                "msg": '更新失败',
+                "data": '未在游戏中打开角色展柜，请打开后3分钟后再试'
+            }
+            # return '更新失败,未在游戏中打开角色展柜，请打开后3分钟后再试'
         for character in data['avatarInfoList']:
             await Character.update_info(self.user_id, self.uid, character, 'enka')
         logger.info('原神信息', f'➤UID<m>{self.uid}</m><g>更新Enka成功</g>')
-        return '更新以下角色成功：\n' + ' '.join(
-            [get_name_by_id(str(c['avatarId'])) for c in data['playerInfo']['showAvatarInfoList']])
+        return {
+            "msg": '更新成功',
+            "data": data
+        }
+        # return '更新成功：\n' + ' '.join([get_name_by_id(str(c['avatarId'])) for c in data['playerInfo']['showAvatarInfoList']])
 
     async def update_talent(self) -> str:
         """
@@ -112,7 +130,6 @@ class GenshinInfoManager:
             :return: 更新结果
         """
         data = await get_mihoyo_public_data(self.uid, self.user_id, 'player_card')
-
         if not isinstance(data, dict):
             return data
         elif data['retcode'] == 1034:
@@ -125,7 +142,7 @@ class GenshinInfoManager:
         elif data['retcode'] != 0:
             logger.info('原神信息', f'更新<m>{self.uid}</m>的玩家数据时出错，消息为<r>{data["message"]}</r>')
             return data['message']
-        await PlayerInfo.update_info(self.user_id, self.uid, data['data'], 'mihoyo')
+        await PlayerInfo.update_info(self.user_id, self.uid, data['data'], 'enka')
         chara_data = await get_mihoyo_public_data(self.uid, self.user_id, 'role_detail')
         if not isinstance(chara_data, dict):
             return chara_data
@@ -137,15 +154,12 @@ class GenshinInfoManager:
         logger.info('原神信息', f'➤UID<m>{self.uid}</m><g>更新玩家信息成功</g>')
         return '更新成功'
 
-    async def update_abyss_info(self, abyss_index: int) -> str:
-        data = await get_mihoyo_public_data(self.uid, self.user_id, 'abyss', schedule_type=str(abyss_index))
+    async def update_abyss_info(self, abyss_index: str) -> str:
+        data = await get_abyss_info(self.uid, self.user_id, schedule_type=abyss_index)
         if not isinstance(data, dict):
             return data
-        elif data['retcode'] != 0:
-            logger.info('原神信息', f'更新<m>{self.uid}</m>的玩家数据时出错，消息为<r>{data["message"]}</r>')
-            return data['message']
-        await AbyssInfo.update_info(self.user_id, self.uid, data['data'])
-        logger.info('原神信息', f'➤UID<m>{self.uid}</m><g>更新深渊信息成功</g>')
+        await AbyssInfo.update_info(self.user_id, self.uid, data["data"])
+        logger.info("原神信息", f"➤UID<m>{self.uid}</m><g>更新深渊信息成功</g>")
         return '更新成功'
 
     async def get_info(self) -> Optional[PlayerInfo]:
@@ -177,11 +191,12 @@ class GenshinInfoManager:
             character = await Character.get_or_none(**query, data_source='enka')
             if not character or character.update_time < (
                     datetime.datetime.now() - datetime.timedelta(hours=config.ysd_auto_update)).replace(
-                    tzinfo=pytz.timezone('Asia/Shanghai')):
+                tzinfo=pytz.timezone('Asia/Shanghai')):
                 try:
                     await self.update_from_enka()
                 except Exception as e:
-                    logger.info('原神角色面板', '➤➤', {'角色': name or character_id}, f'数据更新失败，可能是Enka.Network接口出现问题:{e}', False)
+                    logger.info('原神角色面板', '➤➤', {'角色': name or character_id},
+                                f'数据更新失败，可能是Enka.Network接口出现问题:{e}', False)
                     if character:
                         return character
                     else:
@@ -221,7 +236,8 @@ class GenshinInfoManager:
                 character_list.append(character)
         return player_info, character_list
 
-    async def get_player_info(self) -> Tuple[Union[PlayerInfo, str], Optional[List[Character]]]:
+    async def get_player_info(self) -> tuple[dict[str, str | Any], None] | tuple[str, None] | tuple[
+        PlayerInfo | None, list[Character | None]]:
         await LastQuery.update_last_query(self.user_id, self.uid)
         player_info = await PlayerInfo.get_or_none(user_id=self.user_id, uid=self.uid)
         if player_info is None or player_info.update_time is None or player_info.update_time < (
@@ -235,7 +251,7 @@ class GenshinInfoManager:
             return '获取原神信息失败', None
         characters_list = []
         for chara in player_info.avatars:
-            if c := await self.get_character(character_id=chara):
+            if c := await self.get_character(character_id=chara, data_source='enka'):
                 characters_list.append(c)
         return player_info, characters_list
 
@@ -275,8 +291,8 @@ class GenshinTools:
             :param effective: 有效词条列表
             :return: 评分
         """
-        prop_map = {'攻击力':       4.975, '生命值': 4.975, '防御力': 6.2, '暴击率': 3.3, '暴击伤害': 6.6,
-                    '元素精通':     19.75, '元素充能效率': 5.5}
+        prop_map = {'攻击力': 4.975, '生命值': 4.975, '防御力': 6.2, '暴击率': 3.3, '暴击伤害': 6.6,
+                    '元素精通': 19.75, '元素充能效率': 5.5}
 
         if prop_name in effective and prop_name in {'攻击力', '生命值', '防御力'}:
             return round(prop_value / role_prop[prop_name] * 100 / prop_map[prop_name] * effective[prop_name], 2)
@@ -397,6 +413,8 @@ class GenshinTools:
             return ra_score['Role'][role_name]['输出']
         if '西风' in character.weapon.name and '西风' in ra_score['Role'][role_name]:
             return ra_score['Role'][role_name]['西风']
+        if role_name == '欧洛伦' and artifacts[-2].main_property.name == '雷元素伤害加成':
+            return ra_score['Role'][role_name]['输出']
         return ra_score['Role'][role_name]['常规']
 
     @staticmethod

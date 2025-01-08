@@ -1,3 +1,6 @@
+import json
+from typing import List
+
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Message, MessageEvent, MessageSegment
 from nonebot.adapters.onebot.v11.helpers import HandleCancellation
@@ -14,6 +17,7 @@ from LittlePaimon.utils.message import CommandPlayer, CommandCharacter, CommandU
 from LittlePaimon.utils.genshin import GenshinInfoManager
 from LittlePaimon.utils.tool import freq_limiter
 from LittlePaimon.utils.typing import CHARACTERS
+from .draw_character_info import draw_char_info_bag
 
 from .draw_player_card import draw_player_card
 from .draw_character_bag import draw_chara_bag
@@ -143,6 +147,12 @@ raw_img_cmd = on_command(
         'pm_priority': 10,
     },
 )
+#
+# test_img = on_command(
+#     'test',
+#     priority=10,
+#     block=True,
+# )
 
 
 @ys.handle()
@@ -207,9 +217,9 @@ async def _(event: MessageEvent, players=CommandPlayer(2)):
 
 @ysc.handle()
 async def _(
-    event: MessageEvent,
-    players=CommandPlayer(only_cn=False),
-    characters=CommandCharacter(),
+        event: MessageEvent,
+        players=CommandPlayer(only_cn=False),
+        characters=CommandCharacter(),
 ):
     logger.info('原神角色卡片', '开始执行')
     msg = Message()
@@ -263,9 +273,9 @@ async def _(event: MessageEvent):
 
 @ysd.handle()
 async def _(
-    event: MessageEvent,
-    players=CommandPlayer(only_cn=False),
-    characters=CommandCharacter(),
+        event: MessageEvent,
+        players=CommandPlayer(only_cn=False),
+        characters=CommandCharacter(),
 ):
     logger.info('原神角色面板', '开始执行')
     msg = Message()
@@ -314,8 +324,9 @@ running_udi = []
 
 
 @update_info.handle()
-async def _(event: MessageEvent, state: T_State, uid=CommandUID()):
+async def _(event: MessageEvent, state: T_State, uid=CommandUID(), players=CommandPlayer(2)):
     msg = state['clear_msg']
+    result = Message()
     if not freq_limiter.check(f'udi{uid}'):
         await update_info.finish(
             f'UID{uid}: 更新信息冷却剩余{freq_limiter.left(f"udi{uid}")}秒\n', at_sender=True
@@ -324,20 +335,27 @@ async def _(event: MessageEvent, state: T_State, uid=CommandUID()):
         await update_info.finish(f'UID{uid}正在更新信息中，请勿重复发送指令')
     else:
         running_udi.append(f'{event.user_id}-{uid}')
+        include_talent = any(i in msg for i in ['全部', '技能', '天赋', 'talent', 'all'])
+        await update_info.send('开始更新原神信息，请稍后...')
+        logger.info('原神信息', '➤开始更新', {'用户': event.user_id, 'UID': uid})
+        freq_limiter.start(f'udi{uid}', 180)
+        gim = GenshinInfoManager(str(event.user_id), uid)
         try:
-            include_talent = any(i in msg for i in ['全部', '技能', '天赋', 'talent', 'all'])
-            await update_info.send('开始更新原神信息，请稍后...')
-            logger.info('原神信息', '➤开始更新', {'用户': event.user_id, 'UID': uid})
-            freq_limiter.start(f'udi{uid}', 60)
-            gim = GenshinInfoManager(str(event.user_id), uid)
-            result = await gim.update_all(include_talent)
+            for player in players:
+                gmi = await gim.update_all(include_talent)
+                player_info: dict = gmi
+                try:
+                    img = await draw_char_info_bag(player, player_info)
+                    result += img
+                except Exception as e:
+                    result += f'制图失败, 错误信息: {e}'
         except KeyError as e:
-            result = f'更新失败，缺少{e}的数据，可能是Enka.Network接口出现问题'
+            result += f'更新失败，缺少{e}的数据，可能是Enka.Network接口出现问题'
         except Exception as e:
-            result = f'更新失败，错误信息：{e}'
+            result += f'更新失败，错误信息：{e}'
         finally:
             running_udi.remove(f'{event.user_id}-{uid}')
-        await update_info.finish(f'UID{uid}:\n{result}', at_sender=True)
+        await update_info.finish(result, at_sender=True)
 
 
 @add_alias.handle()
@@ -357,9 +375,9 @@ async def _(event: MessageEvent, state: T_State, msg: Message = CommandArg()):
     parameterless=[HandleCancellation(f'好吧，有事再找{NICKNAME}吧')],
 )
 async def _(
-    event: MessageEvent,
-    chara: str = ArgPlainText('chara'),
-    alias: str = ArgPlainText('alias'),
+        event: MessageEvent,
+        chara: str = ArgPlainText('chara'),
+        alias: str = ArgPlainText('alias'),
 ):
     await PlayerAlias.update_or_create(
         user_id=str(event.user_id), alias=alias, defaults={'character': chara}
@@ -373,9 +391,9 @@ async def _(event: MessageEvent, state: T_State, msg: Message = CommandArg()):
         state['alias'] = msg
     elif aliases := await PlayerAlias.filter(user_id=str(event.user_id)).all():
         state['msg'] = (
-            '你已设置以下别名:\n'
-            + '\n'.join([f'{i.alias} -> {i.character}' for i in aliases])
-            + '\n请输入你想删除的别名或发送"全部"删除全部别名'
+                '你已设置以下别名:\n'
+                + '\n'.join([f'{i.alias} -> {i.character}' for i in aliases])
+                + '\n请输入你想删除的别名或发送"全部"删除全部别名'
         )
     else:
         await delete_alias.finish('你还没有设置任何别名哦')
@@ -407,3 +425,19 @@ async def _(event: MessageEvent):
         )
     else:
         await show_alias.finish('你还没有设置过角色别名哦', at_sender=True)
+
+
+# @test_img.handle()
+# async def _(event: MessageEvent, players=CommandPlayer(2)):
+#     msg = Message()
+#     msg += '正在生成图片'
+#     for player in players:
+#         gim = GenshinInfoManager(player.user_id, player.uid)
+#         player_info, characters_list = await gim.get_player_info()
+#         try:
+#             img = await draw_char_info_bag(player, player_info, characters_list)
+#             msg += img
+#         except Exception as e:
+#             logger.warning(e)
+#
+#     await test_img.finish(msg, at_sender=True)

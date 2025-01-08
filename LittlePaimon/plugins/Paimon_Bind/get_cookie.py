@@ -84,7 +84,7 @@ def generate_qrcode(url):
 
 async def create_login_data():
     device_id = ''.join(random.choices((ascii_letters + digits), k=64))
-    app_id = '1'
+    app_id = '7'
     data = {'app_id': app_id,
             'device': device_id}
     res = await aiorequests.post('https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/fetch?',

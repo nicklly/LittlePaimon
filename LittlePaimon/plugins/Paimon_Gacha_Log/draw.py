@@ -207,12 +207,16 @@ async def draw_gacha_log(user_id: str, uid: str, nickname: Optional[str], signat
     out_gacha_count = total_gacha_count - sum(data_not.values())
     total_five_star_count = sum(len(pool) for pool in data5.values())
     five_star_average = round(out_gacha_count / total_five_star_count, 2) if total_five_star_count else 0
+
     await img.text('平均出货', 209, 335, fm.get('hywh', 24), (24, 24, 24, 102))
     await img.text(str(five_star_average), (211, 305), 286, fm.get('bahnschrift_regular', 48), '#040404', 'center')
+
     await img.text('总抽卡数', 407, 335, fm.get('hywh', 24), (24, 24, 24, 102))
     await img.text(str(total_gacha_count), (408, 503), 286, fm.get('bahnschrift_regular', 48), '#040404', 'center')
+
     await img.text('总计出金', 597, 335, fm.get('hywh', 24), (24, 24, 24, 102))
     await img.text(str(total_five_star_count), (598, 694), 286, fm.get('bahnschrift_regular', 48), '#040404', 'center')
+
     lucky_num = five_star_average if five_star_average>0 else total_gacha_count
     lucky = '欧' if lucky_num <= 50 else '吉' if lucky_num <= 60 else '中' if lucky_num <= 70 else '非'
     await img.paste(await load_image(RESOURCE_BASE_PATH / 'gacha_log' / f'{lucky}{random.randint(1, 3)}.png'), (788, 271))

@@ -1,7 +1,10 @@
 from copy import deepcopy
+from typing import List
+
 from LittlePaimon.database import Character
 
-from .damage_model import common_fix, draw_dmg_pic, udc, get_damage_multipiler, growth_reaction, intensify_reaction
+from .damage_model import common_fix, draw_dmg_pic, udc, get_damage_multipiler, growth_reaction, intensify_reaction, \
+    growth_damage
 
 
 async def get_role_dmg(info: Character):
@@ -69,6 +72,21 @@ async def get_role_dmg(info: Character):
         dmg_data['大招释放伤害'] = udc(dm['大招伤害'] * info.prop.health, (info.prop.crit_rate + vq['暴击率'], info.prop.crit_damage), info.prop.dmg_bonus['水'] + vq['增伤'], info.level)
         dmg_data['开大普攻治疗量'] = (str(int((float(dm['大招治疗量'][0].replace('%生命值上限', '')) / 100.0 * info.prop.health + float(dm['大招治疗量'][1])) * (1 + info.prop.healing_bonus))),)
         dmg_data['战技治疗量'] = (str(int((float(dm['水母治疗量'][0].replace('%生命值上限', '')) / 100.0 * info.prop.health + float(dm['水母治疗量'][1])) * (1 + info.prop.healing_bonus))),)
+
+    elif info.name == '玛拉妮':
+        dci = 0.75 if len(info.constellation) >= 4 else 0
+        # 蒸发、融化反应最终系数
+        r = growth_reaction(info.prop.elemental_mastery, 1.5, 0)
+        # 蒸发、融化反应总伤害
+        growth_dmg = growth_damage(info.prop.elemental_mastery)
+
+        dmg = udc(dm['大招倍率'] * info.prop.health, (info.prop.crit_rate + vq['暴击率'], info.prop.crit_damage + dci), info.prop.dmg_bonus['水'], info.level,  gh=growth_dmg, )
+        dmg_growth = udc(dm['大招倍率'] * info.prop.health, (info.prop.crit_rate + vq['暴击率'], info.prop.crit_damage + dci), info.prop.dmg_bonus['水'], info.level, gh=growth_dmg, r=r)
+
+        dmg_data['踏鲨破浪伤害'] = udc(dm['战技倍率'] * info.prop.health, (info.prop.crit_rate + ve['暴击率'], info.prop.crit_damage + dci), info.prop.dmg_bonus['水'] + va['普攻增伤'], info.level, gh=growth_dmg)
+        dmg_data['踏鲨破浪蒸发'] = udc(dm['战技倍率'] * info.prop.health, (info.prop.crit_rate + ve['暴击率'], info.prop.crit_damage + dci), info.prop.dmg_bonus['水'] + va['普攻增伤'], info.level, gh=growth_dmg, r=r)
+        dmg_data['爆瀑飞弹伤害'] = [str(int(float(item) + dm['天赋增伤'])) for item in dmg]
+        dmg_data['爆瀑飞弹蒸发'] = [str(int(float(item) + dm['天赋增伤'])) for item in dmg_growth]
     else:
         dmg_data = get_dmg_data(info, dm, va, ve, vq)
     if info.damage_describe:

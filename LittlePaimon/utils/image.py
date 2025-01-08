@@ -355,9 +355,11 @@ class PMImage:
                   begin: Tuple[int, int],
                   end: Tuple[int, int],
                   color: Union[str, Tuple[int, int, int, int]] = 'black',
-                  width: int = 1):
+                  width: int = 1
+    ):
         """
         画线
+            :param dash:
             :param begin: 起始点
             :param end: 终点
             :param color: 颜色
