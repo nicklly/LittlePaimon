@@ -12,7 +12,6 @@ from io import BytesIO
 from string import ascii_letters
 from string import digits
 
-import qrcode
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from nonebot import on_command, get_bot, get_app
@@ -21,6 +20,7 @@ from nonebot.adapters.onebot.v11 import Bot, MessageSegment, MessageEvent, Group
 from LittlePaimon.config import config
 from LittlePaimon.database.models import PrivateCookie, LastQuery
 from LittlePaimon.utils import NICKNAME
+from LittlePaimon.utils.qrcode import generate_qrcode
 from LittlePaimon.utils.requests import aiorequests
 from LittlePaimon.utils.scheduler import scheduler
 from LittlePaimon.utils.api import get_bind_game_info
@@ -69,17 +69,17 @@ async def get_stoken(aigis: str = '', data: dict = None):
     return resp.json()
 
 
-def generate_qrcode(url):
-    qr = qrcode.QRCode(version=1,
-                       error_correction=qrcode.constants.ERROR_CORRECT_L,
-                       box_size=10,
-                       border=4)
-    qr.add_data(url)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color='black', back_color='white')
-    bio = BytesIO()
-    img.save(bio)
-    return f'base64://{base64.b64encode(bio.getvalue()).decode()}'
+# def generate_qrcode(url):
+#     qr = qrcode.QRCode(version=1,
+#                        error_correction=qrcode.constants.ERROR_CORRECT_L,
+#                        box_size=10,
+#                        border=4)
+#     qr.add_data(url)
+#     qr.make(fit=True)
+#     img = qr.make_image(fill_color='black', back_color='white')
+#     bio = BytesIO()
+#     img.save(bio)
+#     return f'base64://{base64.b64encode(bio.getvalue()).decode()}'
 
 
 async def create_login_data():
@@ -131,7 +131,7 @@ async def _(event: MessageEvent):  # sourcery skip: use-fstring-for-concatenatio
         await qrcode_bind.finish('你已经在绑定中了，请扫描上一次的二维码')
     login_data = await create_login_data()
     running_login_data[str(event.user_id)] = login_data
-    img_b64 = generate_qrcode(login_data['url'])
+    img_b64 = generate_qrcode(url=login_data['url'], icon_scale=0.15)
     running_login_data[str(event.user_id)]['img_b64'] = img_b64
     img = f'二维码链接：{config.CookieWeb_url}/qrcode?user_id={event.user_id}' if config.qrcode_bind_use_url else MessageSegment.image(img_b64)
     msg_data = await qrcode_bind.send(

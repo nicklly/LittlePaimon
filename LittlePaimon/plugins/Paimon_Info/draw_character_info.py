@@ -76,7 +76,7 @@ async def draw_character_info(avatarId: dict) -> Optional[PMImage]:
         role_name = random.choice(filter_alias)
 
     talent = len(avatarId['talentIdList']) if 'talentIdList' in avatarId else 0
-    # # 命座图标
+    # 命座图标
     constellation = await load_image(ICON / f'命之座{talent}.png')
     constellation = constellation.resize((20, 28))
 
@@ -98,7 +98,6 @@ async def draw_char_info_bag(player: Player, PlayerInfo: dict):
     await img.stretch((255, 1100), 295 * 3 - 21, 'width')
     # 上下拉伸
     await img.stretch((50, 100), 45 * 3 - 21, 'height')
-
     # QQ头像
     avatar = await get_avatar(player.user_id)
     await img.paste(avatar, (47, 52))

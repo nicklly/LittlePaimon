@@ -2818,6 +2818,139 @@
     "QualityType": "QUALITY_PURPLE",
     "WeaponType": "WEAPON_CATALYST"
   },
+  "10000109": {
+    "Element": "Wind",
+    "Consts": ["UI_Talent_S_Mizuki_01", "UI_Talent_S_Mizuki_02", "UI_Talent_U_Mizuki_01", "UI_Talent_S_Mizuki_03", "UI_Talent_U_Mizuki_02", "UI_Talent_S_Mizuki_04"],
+    "SkillOrder": [11091, 11092, 11095],
+    "Skills": {
+      "11091": "Skill_A_Catalyst_MD",
+      "11092": "Skill_S_Mizuki_01",
+      "11095": "Skill_E_Mizuki_01"
+    },
+    "ProudMap": {
+      "11091": 10931,
+      "11092": 10932,
+      "11095": 10939
+    },
+    "NameTextMapHash": 3784387538,
+    "SideIconName": "UI_AvatarIcon_Side_Mizuki",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_CATALYST"
+  },
+  "10000110": {
+    "Element": "Electric",
+    "Consts": ["UI_Talent_S_Iansan_01", "UI_Talent_S_Iansan_02", "UI_Talent_U_Iansan_01", "UI_Talent_S_Iansan_03", "UI_Talent_U_Iansan_02", "UI_Talent_S_Iansan_04"],
+    "SkillOrder": [11101, 11102, 11105],
+    "Skills": {
+      "11101": "Skill_A_03",
+      "11102": "Skill_S_Iansan_01",
+      "11105": "Skill_E_Iansan_01"
+    },
+    "ProudMap": {
+      "11101": 11031,
+      "11102": 11032,
+      "11105": 11039
+    },
+    "NameTextMapHash": 3120492514,
+    "SideIconName": "UI_AvatarIcon_Side_Iansan",
+    "QualityType": "QUALITY_PURPLE",
+    "WeaponType": "WEAPON_POLE"
+  },
+  "10000111": {
+    "Element": "Electric",
+    "Consts": ["UI_Talent_S_Varesa_01", "UI_Talent_S_Varesa_02", "UI_Talent_U_Varesa_01", "UI_Talent_S_Varesa_03", "UI_Talent_U_Varesa_02", "UI_Talent_S_Varesa_04"],
+    "SkillOrder": [11111, 11112, 11115],
+    "Skills": {
+      "11111": "Skill_A_Catalyst_MD",
+      "11112": "Skill_S_Varesa_01",
+      "11115": "Skill_E_Varesa_01"
+    },
+    "ProudMap": {
+      "11111": 11131,
+      "11112": 11132,
+      "11115": 11139
+    },
+    "NameTextMapHash": 283438874,
+    "SideIconName": "UI_AvatarIcon_Side_Varesa",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_CATALYST"
+  },
+  "10000112": {
+    "Element": "Ice",
+    "Consts": ["UI_Talent_S_Escoffier_01", "UI_Talent_S_Escoffier_02", "UI_Talent_U_Escoffier_01", "UI_Talent_S_Escoffier_03", "UI_Talent_U_Escoffier_02", "UI_Talent_S_Escoffier_04"],
+    "SkillOrder": [11121, 11122, 11125],
+    "Skills": {
+      "11121": "Skill_A_03",
+      "11122": "Skill_S_Escoffier_01",
+      "11125": "Skill_E_Escoffier_01"
+    },
+    "ProudMap": {
+      "11121": 11231,
+      "11122": 11232,
+      "11125": 11239
+    },
+    "NameTextMapHash": 4035850498,
+    "SideIconName": "UI_AvatarIcon_Side_Escoffier",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_POLE"
+  },
+  "10000113": {
+    "Element": "Wind",
+    "Consts": ["UI_Talent_S_Ifa_01", "UI_Talent_S_Ifa_02", "UI_Talent_U_Ifa_01", "UI_Talent_S_Ifa_03", "UI_Talent_U_Ifa_02", "UI_Talent_S_Ifa_04"],
+    "SkillOrder": [11131, 11132, 11135],
+    "Skills": {
+      "11131": "Skill_A_Catalyst_MD",
+      "11132": "Skill_S_Ifa_01",
+      "11135": "Skill_E_Ifa_01"
+    },
+    "ProudMap": {
+      "11131": 11331,
+      "11132": 11332,
+      "11135": 11339
+    },
+    "NameTextMapHash": 3398665018,
+    "SideIconName": "UI_AvatarIcon_Side_Ifa",
+    "QualityType": "QUALITY_PURPLE",
+    "WeaponType": "WEAPON_CATALYST"
+  },
+  "10000114": {
+    "Element": "Ice",
+    "Consts": ["UI_Talent_S_SkirkNew_01", "UI_Talent_S_SkirkNew_02", "UI_Talent_U_SkirkNew_01", "UI_Talent_S_SkirkNew_03", "UI_Talent_U_SkirkNew_02", "UI_Talent_S_SkirkNew_04"],
+    "SkillOrder": [11141, 11142, 11145],
+    "Skills": {
+      "11141": "Skill_A_01",
+      "11142": "Skill_S_SkirkNew_01",
+      "11145": "Skill_E_SkirkNew_01"
+    },
+    "ProudMap": {
+      "11141": 11431,
+      "11142": 11432,
+      "11145": 11439
+    },
+    "NameTextMapHash": 123650890,
+    "SideIconName": "UI_AvatarIcon_Side_SkirkNew",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_SWORD_ONE_HAND"
+  },
+  "10000115": {
+    "Element": "Water",
+    "Consts": ["UI_Talent_S_Dahlia_01", "UI_Talent_S_Dahlia_02", "UI_Talent_U_Dahlia_01", "UI_Talent_S_Dahlia_03", "UI_Talent_U_Dahlia_02", "UI_Talent_S_Dahlia_04"],
+    "SkillOrder": [11151, 11152, 11155],
+    "Skills": {
+      "11151": "Skill_A_01",
+      "11152": "Skill_S_Dahlia_01",
+      "11155": "Skill_E_Dahlia_01"
+    },
+    "ProudMap": {
+      "11151": 11531,
+      "11152": 11532,
+      "11155": 11539
+    },
+    "NameTextMapHash": 2332664426,
+    "SideIconName": "UI_AvatarIcon_Side_Dahlia",
+    "QualityType": "QUALITY_PURPLE",
+    "WeaponType": "WEAPON_SWORD_ONE_HAND"
+  },
   "11000046": {
     "Element": "Ice",
     "Consts": [
@@ -2876,7 +3009,25 @@
     "SideIconName": "UI_AvatarIcon_Side_PlayerBoy",
     "QualityType": "QUALITY_ORANGE"
   },
-  "10000005-502": {},
+  "10000005-502": {
+    "Element": "Fire",
+    "Consts": ["UI_Talent_S_PlayerFire_01", "UI_Talent_S_PlayerFire_02", "UI_Talent_U_PlayerFire_01", "UI_Talent_S_PlayerFire_03", "UI_Talent_U_PlayerFire_02", "UI_Talent_S_PlayerFire_04"],
+    "SkillOrder": [100541, 10097, 10098],
+    "Skills": {
+      "10097": "Skill_S_PlayerFire_01",
+      "10098": "Skill_E_PlayerFire_01",
+      "100541": "Skill_A_01"
+    },
+    "NameTextMapHash": 1533656818,
+    "ProudMap": {
+      "10097": 532,
+      "10098": 539,
+      "100541": 530
+    },
+    "SideIconName": "UI_AvatarIcon_Side_PlayerBoy",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_SWORD_ONE_HAND"
+  },
   "10000005-503": {
     "SkillOrder": [
       100542,
@@ -3036,7 +3187,32 @@
     "SideIconName": "UI_AvatarIcon_Side_PlayerGirl",
     "QualityType": "QUALITY_ORANGE"
   },
-  "10000007-702": {},
+  "10000007-702": {
+    "Element": "Fire",
+    "Consts": [
+      "UI_Talent_S_PlayerFire_01",
+      "UI_Talent_S_PlayerFire_02",
+      "UI_Talent_U_PlayerFire_01",
+      "UI_Talent_S_PlayerFire_03",
+      "UI_Talent_U_PlayerFire_02",
+      "UI_Talent_S_PlayerFire_04"
+    ],
+    "SkillOrder": [100551, 10097, 10098],
+    "Skills": {
+      "10097": "Skill_S_PlayerFire_01",
+      "10098": "Skill_E_PlayerFire_01",
+      "100551": "Skill_A_01"
+    },
+    "NameTextMapHash": 3816664530,
+    "ProudMap": {
+      "10097": 532,
+      "10098": 539,
+      "100551": 531
+    },
+    "SideIconName": "UI_AvatarIcon_Side_PlayerGirl",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_SWORD_ONE_HAND"
+  },
   "10000007-703": {
     "SkillOrder": [
       100552,
