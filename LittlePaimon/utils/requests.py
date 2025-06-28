@@ -176,27 +176,27 @@ class aiorequests:
         """
         urls = [
             f'https://file.microgg.cn/KimigaiiWuyi/resource/icon/{name}',
-            f'https://api.ambr.top/assets/UI/{name}',
+            f'https://gi.yatta.moe/assets/UI/{name}',
             f'https://enka.network/ui/{name}',
         ]
         if name.startswith(('UI_EquipIcon', 'UI_RelicIcon')):
             urls.insert(0, f'https://upload-bbs.mihoyo.com/game_record/genshin/equip/{name}')
         elif name.startswith('UI_Talent'):
             urls.insert(0, f'https://upload-bbs.mihoyo.com/game_record/genshin/constellation_icon/{name}')
-            urls.insert(1, f'https://ghproxy.com/https://raw.githubusercontent.com/CMHopeSunshine/GenshinWikiMap/master/resources/constellation/{name}')
+            urls.insert(1, f'https://gh-proxy.com/https://raw.githubusercontent.com/nicklly/GenshinWikiMap/master/resources/constellation/{name}')
         elif name.startswith('UI_AvatarIcon'):
             if name.endswith('UI_AvatarIcon_Side'):
-                urls.insert(0, f'https://upload-bbs.mihoyo.com/game_record/genshin/character_side_icon/{name}')
+                urls.insert(0, f'https://gi.yatta.moe/assets/UI/{name}')
             elif name.endswith('Card.png'):
                 urls.insert(0, f'https://upload-bbs.mihoyo.com/game_record/genshin/character_card_icon/{name}')
             else:
                 urls.insert(0, f'https://upload-bbs.mihoyo.com/game_record/genshin/character_icon/{name}')
         elif name.startswith('UI_Gacha_AvatarImg_'):
-            urls.insert(0, f'https://ghproxy.com/https://raw.githubusercontent.com/CMHopeSunshine/GenshinWikiMap/master/resources/gacha_img/{name}')
+            urls.insert(0, f'https://gh-proxy.com/https://raw.githubusercontent.com/nicklly/GenshinWikiMap/master/resources/gacha_img/{name}')
         elif name.startswith('Skill_'):
-            urls.insert(0, f'https://ghproxy.com/https://raw.githubusercontent.com/CMHopeSunshine/GenshinWikiMap/master/resources/talent/{name}')
+            urls.insert(0, f'https://gh-proxy.com/https://raw.githubusercontent.com/nicklly/GenshinWikiMap/master/resources/talent/{name}')
         elif name.startswith('UI_ItemIcon_'):
-            urls.insert(0, f'https://ghproxy.com/https://raw.githubusercontent.com/CMHopeSunshine/GenshinWikiMap/master/resources/materials/{name}')
+            urls.insert(0, f'https://gh-proxy.com/https://raw.githubusercontent.com/nicklly/GenshinWikiMap/master/resources/materials/{name}')
         for url in urls:
             with contextlib.suppress(Exception):
                 if url is not None:

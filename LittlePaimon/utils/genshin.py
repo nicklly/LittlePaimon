@@ -5,10 +5,11 @@ from typing import Optional, List, Union, Tuple, Dict, Any
 import pytz
 
 from LittlePaimon.config import config
-from LittlePaimon.database import Artifact, CharacterProperty, Artifacts, Talents, Talent, PlayerInfo, Character
+from LittlePaimon.database import Artifact, CharacterProperty, Artifacts, Talents, Talent, PlayerInfo, Character, \
+    Hard_Challenge_Info
 from LittlePaimon.database import PlayerInfo, Character, LastQuery, PrivateCookie, AbyssInfo
 from .alias import get_name_by_id
-from .api import get_enka_data, get_mihoyo_public_data, get_mihoyo_private_data, get_abyss_info
+from .api import get_enka_data, get_mihoyo_public_data, get_mihoyo_private_data, get_abyss_info, get_hard_challenge_info
 from .files import load_json
 from .image import PMImage
 from .logger import logger
@@ -162,6 +163,17 @@ class GenshinInfoManager:
         logger.info("原神信息", f"➤UID<m>{self.uid}</m><g>更新深渊信息成功</g>")
         return '更新成功'
 
+    async def update_hard_challenge_info(self) -> str:
+        data = await get_hard_challenge_info(self.uid, self.user_id)
+        if data['data'] is None:
+            logger.info("原神信息", f"➤UID<m>{self.uid}</m><g>更新幽境危战信息失败</g>")
+            return '更新失败'
+        if not isinstance(data, dict):
+            return data
+        await Hard_Challenge_Info.update_info(self.user_id, self.uid, data["data"])
+        logger.info("原神信息", f"➤UID<m>{self.uid}</m><g>更新幽境危战信息成功</g>")
+        return '更新成功'
+
     async def get_info(self) -> Optional[PlayerInfo]:
         """
         获取原神玩家总体信息
@@ -262,6 +274,15 @@ class GenshinInfoManager:
         if result != '更新成功':
             return result
         return await AbyssInfo.get_or_none(user_id=self.user_id, uid=self.uid)
+
+    async def get_hard_challenge_Info(self)-> Union[Hard_Challenge_Info, str]:
+        await LastQuery.update_last_query(self.user_id, self.uid)
+        await Hard_Challenge_Info.filter(user_id=self.user_id, uid=self.uid).delete()
+        result = await self.update_hard_challenge_info()
+
+        if result == '更新失败':
+            return '当前UID未绑定cookie, 数据查询失败'
+        return await Hard_Challenge_Info.get_or_none(user_id=self.user_id, uid=self.uid)
 
     async def export_data(self) -> dict:
         """

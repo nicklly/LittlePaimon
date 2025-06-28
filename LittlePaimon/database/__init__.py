@@ -31,10 +31,13 @@ DATABASE = {
     },
     'apps':        {
         'paimon_genshin':       {
-            'models':             [player_info.__name__,
-                                   abyss_info.__name__,
-                                   character.__name__,
-                                   cookie.__name__],
+            'models':             [
+                player_info.__name__,
+                abyss_info.__name__,
+                abyss2_info.__name__,
+                character.__name__,
+                cookie.__name__
+            ],
             'default_connection': 'paimon_genshin',
         },
         'paimon_subscription':  {
