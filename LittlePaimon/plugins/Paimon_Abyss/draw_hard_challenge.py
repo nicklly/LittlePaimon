@@ -1,7 +1,7 @@
 import datetime
 from typing import  List
 
-from LittlePaimon.database import Hard_Challenge_Info, Abyss2Info, Abyss2Infos
+from LittlePaimon.database import Hard_Challenge_Info, Abyss2Info
 from LittlePaimon.utils.alias import get_chara_icon, get_name_by_id
 from LittlePaimon.utils.image import PMImage
 from LittlePaimon.utils.image import font_manager as fm
@@ -9,10 +9,10 @@ from LittlePaimon.utils.image import load_image
 from LittlePaimon.utils.message import MessageBuild
 from LittlePaimon.utils.path import RESOURCE_BASE_PATH
 
-async def group_by_floor(teams: Abyss2Infos) -> List[dict]:
+async def group_by_floor(info: Hard_Challenge_Info) -> List[dict]:
     """将角色数据按Boss分组"""
     floors = {}
-    for character in teams:
+    for character in info.teams:
         if character.Boss not in floors:
             floors[character.Boss] = {
                 'boss': character.Boss,
@@ -116,6 +116,7 @@ async def draw_hard_challenge_card(info: Hard_Challenge_Info):
         await load_image(RESOURCE_BASE_PATH / 'hard_challenge' / 'bg.png', mode='RGBA')
     )
     orange_line = await load_image(RESOURCE_BASE_PATH / 'general' / 'line.png')
+    difficult = await load_image(RESOURCE_BASE_PATH / 'hard_challenge' / f'Icon_Stygian_Onslaught_Medal_{info.battle[0].battle_difficult}.png', size=(60, 60))
     # 标题文字
     await bg.text('幽境危战', 36, 29, fm.get('优设标题黑', 108), '#40342d')
     # UID和昵称
@@ -123,11 +124,13 @@ async def draw_hard_challenge_card(info: Hard_Challenge_Info):
 
     # 战绩速览标题
     await bg.paste(orange_line, (40, 164))
-    await bg.text('战绩速览', 63, 176, fm.get('SourceHanSansCN-Bold.otf', 30), 'white')
+    await bg.text('最佳纪录', 63, 176, fm.get('SourceHanSansCN-Bold.otf', 30), 'white')
+    await bg.paste(difficult,(870, 160))
+    await bg.text(f'{info.battle[0].max_battle_time}秒', 940, 176, fm.get('SourceHanSansCN-Bold.otf', 30), '#252525')
     # logo和生成时间
-    await bg.text( f'CREATED BY LITTLEPAIMON AT {datetime.datetime.now().strftime("%m-%d %H:%M")}', 1025, 178, fm.get('bahnschrift_regular.ttf', 30), '#8c4c2e', 'right')
+    await bg.text( f'CREATED BY LITTLEPAIMON', 730, 1580, fm.get('bahnschrift_regular.ttf', 30), '#252525', 'right')
     # 2. 分组数据（按Boss分组）
-    floor_data = await group_by_floor(info.teams)
+    floor_data = await group_by_floor(info)
 
     # 3. 绘制三层信息
     for floor_idx in range(3):

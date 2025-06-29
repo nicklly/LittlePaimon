@@ -159,18 +159,24 @@ class GenshinInfoManager:
         data = await get_abyss_info(self.uid, self.user_id, schedule_type=abyss_index)
         if not isinstance(data, dict):
             return data
+        elif data['retcode'] != 0:
+            logger.info('原神信息', f'更新<m>{self.uid}</m>的玩家数据时出错，消息为<r>{data["message"]}</r>')
+            return data['message']
         await AbyssInfo.update_info(self.user_id, self.uid, data["data"])
         logger.info("原神信息", f"➤UID<m>{self.uid}</m><g>更新深渊信息成功</g>")
         return '更新成功'
 
-    async def update_hard_challenge_info(self) -> str:
+    async def update_hard_challenge_info(self, battle_type: Optional[str] = 'single') -> str:
         data = await get_hard_challenge_info(self.uid, self.user_id)
-        if data['data'] is None:
-            logger.info("原神信息", f"➤UID<m>{self.uid}</m><g>更新幽境危战信息失败</g>")
-            return '更新失败'
         if not isinstance(data, dict):
             return data
-        await Hard_Challenge_Info.update_info(self.user_id, self.uid, data["data"])
+        elif data['retcode'] != 0:
+            logger.info('原神信息', f'更新<m>{self.uid}</m>的玩家数据时出错，消息为<r>{data["message"]}</r>')
+            return data['message']
+        elif data['retcode'] == 0:
+            if not data['data']['data'][0][battle_type]['has_data']:
+                return f'UID{self.uid} 暂无 单人/多人联机 挑战记录,请完成对应挑战后再来查询'
+        await Hard_Challenge_Info.update_info(self.user_id, self.uid, data["data"], battle_type)
         logger.info("原神信息", f"➤UID<m>{self.uid}</m><g>更新幽境危战信息成功</g>")
         return '更新成功'
 
@@ -275,13 +281,13 @@ class GenshinInfoManager:
             return result
         return await AbyssInfo.get_or_none(user_id=self.user_id, uid=self.uid)
 
-    async def get_hard_challenge_Info(self)-> Union[Hard_Challenge_Info, str]:
+    async def get_hard_challenge_Info(self, battle_type: Optional[str] = 'single')-> Union[Hard_Challenge_Info, str]:
         await LastQuery.update_last_query(self.user_id, self.uid)
         await Hard_Challenge_Info.filter(user_id=self.user_id, uid=self.uid).delete()
-        result = await self.update_hard_challenge_info()
+        result = await self.update_hard_challenge_info(battle_type)
 
-        if result == '更新失败':
-            return '当前UID未绑定cookie, 数据查询失败'
+        if result != '更新成功':
+            return result
         return await Hard_Challenge_Info.get_or_none(user_id=self.user_id, uid=self.uid)
 
     async def export_data(self) -> dict:

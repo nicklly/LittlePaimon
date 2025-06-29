@@ -62,25 +62,27 @@ abyss_team = on_command(
 )
 
 hard_challenge = on_command(
-    'sy2',
+    'yjwz',
     aliases={'幽境危战', 'yjwz'},
     priority=10,
     block=True,
     state={
-        'pm_name': 'sy2',
+        'pm_name': 'yjwz',
         'pm_description': '查看本期幽境危战战报',
-        'pm_usage': 'sy2(uid)',
+        'pm_usage': 'yjwz(uid)[单人|多人]',
         'pm_priority': 1,
     }
 )
 @hard_challenge.handle()
 async def _(event: MessageEvent, players=CommandPlayer(), msg: Message = CommandArg()):
     logger.info('原神幽境危战战报', '开始执行')
+    text = msg.extract_plain_text()  # 先提取文本
+    battle_type = 'mp' if '多人' in text else 'single'
     msg = Message()
     for player in players:
         logger.info('原神幽境危战战报', '➤ ', {'用户': players[0].user_id, 'UID': players[0].uid})
         gim = GenshinInfoManager(player.user_id, player.uid)
-        hard_challenge_info = await gim.get_hard_challenge_Info()
+        hard_challenge_info = await gim.get_hard_challenge_Info(battle_type)
         if isinstance(hard_challenge_info, str):
             logger.info('原神幽境危战战报', '➤➤', {}, hard_challenge_info, False)
             msg += f'UID{player.uid} {hard_challenge_info}\n'
