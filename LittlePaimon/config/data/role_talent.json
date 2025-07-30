@@ -641,7 +641,13 @@
     "1163": "风花之奉",
     "1164": "众愿的集祷",
     "1165": "遂成的狡意",
-    "1166": "愿一切欢睦陪伴你"
+    "1166": "愿一切欢睦陪伴你",
+    "1171": "循环整流引擎",
+    "1172": "辅助清理模块",
+    "1173": "高阶情感固件",
+    "1174": "敕谕未至之路",
+    "1175": "超越镜影之梦",
+    "1176": "献予你的明晨"
   },
   "Icon": {
     "21": "UI_Talent_S_Ayaka_01",
@@ -1285,6 +1291,12 @@
     "1163": "UI_Talent_U_Dahlia_01",
     "1164": "UI_Talent_S_Dahlia_03",
     "1165": "UI_Talent_U_Dahlia_02",
-    "1166": "UI_Talent_S_Dahlia_04"
+    "1166": "UI_Talent_S_Dahlia_04",
+    "1171": "UI_Talent_S_Ineffa_01",
+    "1172": "UI_Talent_S_Ineffa_02!",
+    "1173": "UI_Talent_U_Ineffa_01",
+    "1174": "UI_Talent_S_Ineffa_03",
+    "1175": "UI_Talent_U_Ineffa_02",
+    "1176": "UI_Talent_S_Ineffa_04"
   }
 }

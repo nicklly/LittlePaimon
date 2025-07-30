@@ -23,7 +23,6 @@ __plugin_meta__ = PluginMetadata(
     },
 )
 
-
 sy = on_command(
     'sy',
     aliases={'深渊战报', '深渊信息'},
@@ -73,6 +72,42 @@ hard_challenge = on_command(
         'pm_priority': 1,
     }
 )
+#
+# role_combat = on_command(
+#     'hxzjjs',
+#     aliases={'幻想真境剧诗', 'hxzjjs'},
+#     priority=10,
+#     block=True,
+#     state={
+#         'pm_name': 'yjwz',
+#         'pm_description': '查看本期幻想真境剧诗战报',
+#         'pm_usage': 'yjwz(uid)',
+#         'pm_priority': 1,
+#     }
+# )
+#
+# @role_combat.handle()
+# async def _(event: MessageEvent, players=CommandPlayer(), msg: Message = CommandArg()):
+#     logger.info('原神幻想真境剧诗战报', '开始执行')
+#     msg = Message()
+#     for player in players:
+#         logger.info('原神幻想真境剧诗战报', '➤ ', {'用户': players[0].user_id, 'UID': players[0].uid})
+#         gim = GenshinInfoManager(player.user_id, player.uid)
+#         role_combat_info = await gim.get_role_combat_info()
+#         if isinstance(role_combat_info, str):
+#             logger.info('原神幻想真境剧诗战报', '➤➤', {}, role_combat_info, False)
+#             msg += f'UID{player.uid} {role_combat_info}\n'
+#         else:
+#             logger.info('原神幻想真境剧诗战报', '➤➤', {}, '数据获取成功', True)
+#             try:
+#                 img = await draw_hard_challenge_card(role_combat_info)
+#                 logger.info('原神幻想真境剧诗战报', '➤➤➤', {}, '制图完成', True)
+#                 msg += img
+#             except Exception as e:
+#                 logger.info('原神幻想真境剧诗战报', '➤➤➤', {}, f'制图出错:{e}', False)
+#                 msg += F'UID{player.uid}制图时出错：{e}\n'
+
+
 @hard_challenge.handle()
 async def _(event: MessageEvent, players=CommandPlayer(), msg: Message = CommandArg()):
     logger.info('原神幽境危战战报', '开始执行')

@@ -35,7 +35,7 @@ async def draw_floor_team(bg: PMImage, characters: List[Abyss2Info], y_offset: i
     # 绘制4个角色
     for i, chara in enumerate(characters[:4]):
         avatar_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'icon' / f"star{chara.rarity}.png"), mode='RGBA')
-        rank = await load_image(RESOURCE_BASE_PATH / 'icon' / f"命之座{chara.rank}.png", size=(30, 35))
+        rank = await load_image(RESOURCE_BASE_PATH / 'icon' / f"level_hywh_{chara.rank}.png", size=(25, 30))
         await avatar_bg.resize((130, 135))
         x_pos = 60 + i * (card_width + 10)
         # 角色头像
@@ -43,8 +43,8 @@ async def draw_floor_team(bg: PMImage, characters: List[Abyss2Info], y_offset: i
             try:
                 avatar = PMImage(await load_image(RESOURCE_BASE_PATH / 'avatar' / f"{chara.icon}.png"), mode='RGBA')
                 await avatar.resize((120, 125))
-                await avatar_bg.paste(avatar, (5, 5), True)
-                await avatar_bg.paste(rank, (100, 100))
+                await avatar_bg.paste(avatar, (5, 5))
+                await avatar_bg.paste(rank, (105, 105))
             except:
                 pass
         # 角色信息

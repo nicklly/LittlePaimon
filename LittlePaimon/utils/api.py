@@ -25,6 +25,9 @@ ABYSS_API = (
 HARD_CHALLENGE_API = (
     'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/hard_challenge'
 )
+ROLE_COMBAT_API = (
+    'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/role_combat'
+)
 PLAYER_CARD_API = (
     'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/index'
 )
@@ -360,7 +363,34 @@ async def get_abyss_info(
             logger.info('原神深渊战报', f'过码成功' if k > 0 else f"获取数据成功")
             return data
         return data['message']
-
+#
+# async def get_role_combat_info(
+#         uid: str,
+#         user_id: Optional[str]
+# ):
+#     cookie_info = await get_cookie(user_id, uid, True)
+#     if not cookie_info:
+#         return '当前没有可使用的cookie，请使用命令[原神扫码绑定]/[ysb]绑定私人cookie或联系超级管理员添加公共cookie，'
+#     server_id = 'cn_qd01' if uid[0] == '5' else 'cn_gf01'
+#     headers = mihoyo_headers(
+#         q=f'role_id={uid}&need_detail=True&server={server_id}&active=1',
+#         cookie=cookie_info.cookie,
+# )
+#     headers['x-rpc-device_fp'] = '38d7f236aea34'
+#     headers["x-rpc-device_id"] = await get_device_id(cookie_info.cookie)
+#     data: dict = (
+#         await aiorequests.get(
+#             url=ROLE_COMBAT_API,
+#             headers=headers,
+#             params={
+#             "role_id": uid,
+#             "server": server_id,
+#             "active": 1,
+#             "need_detail": True,
+#             }
+#         )
+#     ).json()
+#     return data
 
 async def get_mihoyo_public_data(
         uid: str,

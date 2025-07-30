@@ -31952,5 +31952,12 @@
     "element": "水",
     "skill": {},
     "attribute": {}
+  },
+  "伊涅芙": {
+    "region": "纳塔",
+    "star": 5,
+    "element": "雷",
+    "skill": {},
+    "attribute": {}
   }
 }
