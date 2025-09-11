@@ -8,7 +8,7 @@ from LittlePaimon.config import config
 from LittlePaimon.database import Artifact, CharacterProperty, Artifacts, Talents, Talent, \
     Hard_Challenge_Info
 from LittlePaimon.database import PlayerInfo, Character, LastQuery, PrivateCookie, AbyssInfo
-from .api import get_enka_data, get_mihoyo_public_data, get_mihoyo_private_data, get_abyss_info, get_hard_challenge_info
+from .api import get_enka_data, get_mihoyo_public_data, get_mihoyo_private_data, get_abyss_info, get_Abyss2_info
 from .files import load_json
 from .logger import logger
 from .path import JSON_DATA
@@ -159,37 +159,40 @@ class GenshinInfoManager:
             abyss_index: Optional[int] = None,
             battle_type: Optional[str] = None
     ) -> str:
-        result = ''
         if record == 'abyss':
             data = await get_abyss_info(self.uid, self.user_id, schedule_type=abyss_index)
             if not isinstance(data, dict):
-                result = data
+                return data
             elif data['retcode'] != 0:
                 logger.info('原神信息', f'更新<m>{self.uid}</m>的玩家数据时出错，消息为<r>{data["message"]}</r>')
-                result = data['message']
+                return data['message']
             await AbyssInfo.update_info(self.user_id, self.uid, data["data"])
             logger.info("原神信息", f"➤UID<m>{self.uid}</m><g>更新深渊信息成功</g>")
-            result = '更新成功'
+            return '更新成功'
 
         elif record == 'hard_challenge':
-            data = await get_hard_challenge_info(self.uid, self.user_id)
+            data = await get_Abyss2_info(self.uid, self.user_id)
             if not isinstance(data, dict):
-                result = data
+                return data
             elif data['retcode'] != 0:
                 logger.info('原神信息', f'更新<m>{self.uid}</m>的玩家数据时出错，消息为<r>{data["message"]}</r>')
-                result = data['message']
+                return data['message']
             elif data['retcode'] == 0:
-                if not data['data']['data'][0][battle_type]['has_data']:
-                    result = f'UID{self.uid} 暂无 单人/多人联机 挑战记录,请完成对应挑战后再来查询'
-            await Hard_Challenge_Info.update_info(self.user_id, self.uid, data["data"], battle_type)
+                if (
+                        not data['data']['data'][abyss_index][battle_type]['has_data'] and
+                        data['data']['data'][abyss_index][battle_type]['best'] is None and
+                        not data['data']['data'][abyss_index][battle_type]['challenge']
+                ):
+                    return f'暂无{"多人模式" if "mp" in battle_type else "单人模式"}挑战记录,请完成对应挑战后再来查询'
+            elif data['retcode'] == '10104':
+                return f'UID {self.uid}'
+            await Hard_Challenge_Info.update_info(self.user_id, self.uid, data["data"], battle_type, abyss_index)
             logger.info("原神信息", f"➤UID<m>{self.uid}</m><g>更新幽境危战信息成功</g>")
-            result = '更新成功'
+            return '更新成功'
 
         elif record == 'role_combat':
-            data = await get_hard_challenge_info(self.uid, self.user_id)
-            result = '更新成功'
-
-        return result
+            data = await get_Abyss2_info(self.uid, self.user_id)
+            return '更新成功'
 
     async def get_info(self) -> Optional[PlayerInfo]:
         """
@@ -292,10 +295,10 @@ class GenshinInfoManager:
             return result
         return await AbyssInfo.get_or_none(user_id=self.user_id, uid=self.uid)
 
-    async def get_hard_challenge_Info(self, battle_type: Optional[str] = 'single')-> Union[Hard_Challenge_Info, str]:
+    async def get_abyss2_Info(self, battle_type: Optional[str] = 'single', abyss2_index: Optional[int] = 0) -> Union[Hard_Challenge_Info, str]:
         await LastQuery.update_last_query(self.user_id, self.uid)
         await Hard_Challenge_Info.filter(user_id=self.user_id, uid=self.uid).delete()
-        result = await self.update_game_record(record='hard_challenge', battle_type=battle_type)
+        result = await self.update_game_record(record='hard_challenge', battle_type=battle_type, abyss_index=abyss2_index)
 
         if result != '更新成功':
             return result

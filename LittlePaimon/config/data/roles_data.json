@@ -31959,5 +31959,26 @@
     "element": "雷",
     "skill": {},
     "attribute": {}
+  },
+  "菈乌玛": {
+    "region": "挪德卡莱",
+    "star": 5,
+    "element": "草",
+    "skill": {},
+    "attribute": {}
+  },
+  "菲林斯": {
+    "region": "挪德卡莱",
+    "star": 5,
+    "element": "雷",
+    "skill": {},
+    "attribute": {}
+  },
+  "爱诺": {
+    "region": "挪德卡莱",
+    "star": 4,
+    "element": "水",
+    "skill": {},
+    "attribute": {}
   }
 }

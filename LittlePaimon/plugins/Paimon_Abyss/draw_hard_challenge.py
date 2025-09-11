@@ -1,4 +1,3 @@
-import datetime
 from typing import  List
 
 from LittlePaimon.database import Hard_Challenge_Info, Abyss2Info
@@ -24,27 +23,35 @@ async def group_by_floor(info: Hard_Challenge_Info) -> List[dict]:
     return list(floors.values())
 
 async def draw_floor_team(bg: PMImage, characters: List[Abyss2Info], y_offset: int):
+
+    element_type = {
+        "Pyro": "火",
+        "Cryo": "冰",
+        "Geo": "岩",
+        "Dendro": "草",
+        "Hydro": "水",
+        "Electro": "雷",
+        "Anemo": "风"
+    }
     """绘制队伍角色（单行4个）"""
     # 角色卡片参数
     card_width = 145  # 卡片宽度缩小以适应间隔
-    spacing = 15      # 角色间隔
-    start_x = 30      # 起始X坐标
 
-    total_width = 4 * card_width + 3 * spacing
-    start_x = (1080 - total_width) // 2  # 自动居中计算
     # 绘制4个角色
     for i, chara in enumerate(characters[:4]):
         avatar_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'icon' / f"star{chara.rarity}.png"), mode='RGBA')
         rank = await load_image(RESOURCE_BASE_PATH / 'icon' / f"level_hywh_{chara.rank}.png", size=(25, 30))
-        await avatar_bg.resize((130, 135))
+        await avatar_bg.resize((140, 145))
         x_pos = 60 + i * (card_width + 10)
         # 角色头像
         if chara.icon:
             try:
                 avatar = PMImage(await load_image(RESOURCE_BASE_PATH / 'avatar' / f"{chara.icon}.png"), mode='RGBA')
-                await avatar.resize((120, 125))
+                element = PMImage(await load_image(RESOURCE_BASE_PATH / 'icon' / f"{element_type[chara.element]}.png"), mode='RGBA')
+                await avatar.resize((130, 135))
                 await avatar_bg.paste(avatar, (5, 5))
-                await avatar_bg.paste(rank, (105, 105))
+                await avatar_bg.paste(rank, (115, 115))
+                await avatar_bg.paste(element, (108, 5))
             except:
                 pass
         # 角色信息
@@ -52,11 +59,11 @@ async def draw_floor_team(bg: PMImage, characters: List[Abyss2Info], y_offset: i
 
 async def draw_dps_card(bg: PMImage, avatar_data: dict, x_pos: int, y_pos: int):
     avatar_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / f"orange_circle.png"))
-    await avatar_bg.resize((60, 60))
+    await avatar_bg.resize((80, 80))
     if avatar_data.get('avatar_id'):
         try:
             avatar = PMImage(await load_image(RESOURCE_BASE_PATH / 'avatar' / f"{get_chara_icon(name=get_name_by_id(avatar_data.get('avatar_id')))}.png"), mode='RGBA')
-            await avatar.resize((55, 55))
+            await avatar.resize((75, 75))
             await avatar.to_circle('circle')
             await avatar_bg.paste(avatar, (2, 5))
             await bg.paste(avatar_bg, (x_pos, y_pos))
@@ -72,21 +79,21 @@ async def draw_best_avatars(bg: PMImage, best_avatars: list, y_offset: int):
     await draw_dps_card(
         bg=bg,
         avatar_data=best_avatars[0],
-        x_pos=x_pos + 30,
-        y_pos=y_offset + 300
+        x_pos=x_pos + 670,
+        y_pos=y_offset + 150
     )
-    await bg.text('最强一击', x_pos + 100, y_offset + 310, fm.get('SourceHanSansCN-Bold.otf', 40),'#252525')
-    await bg.text(f"{best_avatars[0].get('dps', '0')}", x_pos + 270, y_offset + 310, fm.get('SourceHanSansCN-Bold.otf', 40), '#252525')
+    await bg.text('最强一击', x_pos + 800, y_offset + 150, fm.get('SourceHanSansCN-Bold.otf', 40),'#252525')
+    await bg.text(f"{best_avatars[0].get('dps', '0')}", x_pos + 840, y_offset + 200, fm.get('SourceHanSansCN-Bold.otf', 30), '#252525')
 
     if len(best_avatars) > 1:
         await draw_dps_card(
             bg=bg,
             avatar_data=best_avatars[1],
-            x_pos=x_pos + 450,
-            y_pos=y_offset + 300
+            x_pos=x_pos + 670,
+            y_pos=y_offset + 270
         )
-        await bg.text( f"最高总伤害",x_pos + 520, y_offset + 310, fm.get('SourceHanSansCN-Bold.otf', 40), '#252525')
-        await bg.text( f"{best_avatars[1].get('dps', '0')}", x_pos + 750, y_offset + 310, fm.get('SourceHanSansCN-Bold.otf', 40), '#252525')
+        await bg.text( f"最高总伤害",x_pos + 760, y_offset + 270, fm.get('SourceHanSansCN-Bold.otf', 40), '#252525')
+        await bg.text( f"{best_avatars[1].get('dps', '0')}", x_pos + 820, y_offset + 320, fm.get('SourceHanSansCN-Bold.otf', 30), '#252525')
     else:
         await bg.text("无其他突出表现", 60 + 180, y_offset + 60,  fm.get('hywh', 30))
 
@@ -97,19 +104,20 @@ async def draw_single_floor(bg: PMImage, floor_info: dict, floor_idx: int, y_off
     await floor_bg.resize((1040, 450))
     # Boss名称
     boss_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / 'orange_card.png'))
-    await boss_bg.resize((550, 50))
+    await boss_bg.resize((900, 50))
     await bg.paste(boss_bg, (90, y_offset + 65))
     # 战斗用时
     await bg.text(floor_info['boss'], 105, y_offset + 70,  fm.get('SourceHanSansCN-Bold.otf', 40), align='center')
-    await bg.text(f"{floor_info['battle_time']}秒", 800 - time_bg_width//2, y_offset + 70, fm.get('SourceHanSansCN-Bold.otf', 40), '#252525')
+    await bg.text("战斗用时", 180 - time_bg_width // 2, y_offset + 140, fm.get('SourceHanSansCN-Bold.otf', 35), '#252525')
+    await bg.text(f"{floor_info['battle_time']}秒", 680 - time_bg_width // 2, y_offset + 140, fm.get('SourceHanSansCN-Bold.otf', 35), '#252525')
     await bg.paste(floor_bg, (20, y_offset))
     # 1. 最佳角色区域
     await draw_best_avatars(bg, floor_info['best_avatars'], y_offset + 30)
     # 2. 队伍角色区域
-    await draw_floor_team(bg, floor_info['characters'], y_offset + 50)
+    await draw_floor_team(bg, floor_info['characters'], y_offset + 90)
 
 async def draw_hard_challenge_card(info: Hard_Challenge_Info):
-    if info is None:
+    if not info:
         return '暂无深渊挑战数据，请稍候再试'
     # 加载图片素材
     bg = PMImage(

@@ -63,6 +63,8 @@ class Abyss2Info(BaseModel):
     icon: Optional[str] = None
     """命座"""
     rank: Optional[int] = None
+    """元素类型"""
+    element: Optional[str] = None
     """最佳角色"""
     best_avatar: Optional[List] = None
     """层间战斗信息"""
@@ -116,14 +118,14 @@ class Hard_Challenge_Info(Model):
         table = "hard_challenge_info"
         table_description = "原神玩家幽境危战信息表"
     @classmethod
-    async def update_info(cls, user_id: str, uid: str, data: dict, battle_type: Optional[str] = 'single'):
+    async def update_info(cls, user_id: str, uid: str, data: dict, battle_type: str, abyss_index: int):
         await cls.filter(user_id=user_id, uid=uid).delete()
         info, _ = await cls.get_or_create(user_id=user_id, uid=uid)
         info.battle = BattleInfos(
             BattleInfos=[
                 BattleInfo(
-                    battle_difficult=data['data'][0][battle_type]['best']['difficulty'],
-                    max_battle_time=data['data'][0][battle_type]['best']['second']
+                    battle_difficult=data['data'][abyss_index][battle_type]['best']['difficulty'],
+                    max_battle_time=data['data'][abyss_index][battle_type]['best']['second']
                 )
             ]
         )
@@ -135,12 +137,13 @@ class Hard_Challenge_Info(Model):
                     level=character['level'],
                     rarity=character['rarity'],
                     rank=character['rank'],
+                    element=character['element'],
                     icon=get_chara_icon(name=get_name_by_id(character['avatar_id'])),
                     best_avatar=challenge['best_avatar'],
                     Boss=challenge['name'],
                     battle_time=challenge['second']
                 )
-                for challenge in data['data'][0][battle_type]['challenge']
+                for challenge in data['data'][abyss_index][battle_type]['challenge']
                 for character in challenge['teams']
             ]
         )

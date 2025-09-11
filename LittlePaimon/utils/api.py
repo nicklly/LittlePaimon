@@ -291,7 +291,7 @@ async def get_bind_game_info(cookie: str, mys_id: str):
     return None
 
 
-async def get_hard_challenge_info(
+async def get_Abyss2_info(
         uid: str,
         user_id: Optional[str],
 ):

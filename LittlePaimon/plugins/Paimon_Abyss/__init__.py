@@ -113,11 +113,12 @@ async def _(event: MessageEvent, players=CommandPlayer(), msg: Message = Command
     logger.info('原神幽境危战战报', '开始执行')
     text = msg.extract_plain_text()  # 先提取文本
     battle_type = 'mp' if '多人' in text else 'single'
+    abyss2_index = 1 if '上期' in text else 0
     msg = Message()
     for player in players:
         logger.info('原神幽境危战战报', '➤ ', {'用户': players[0].user_id, 'UID': players[0].uid})
         gim = GenshinInfoManager(player.user_id, player.uid)
-        hard_challenge_info = await gim.get_hard_challenge_Info(battle_type)
+        hard_challenge_info = await gim.get_abyss2_Info(battle_type, abyss2_index)
         if isinstance(hard_challenge_info, str):
             logger.info('原神幽境危战战报', '➤➤', {}, hard_challenge_info, False)
             msg += f'UID{player.uid} {hard_challenge_info}\n'
@@ -130,6 +131,7 @@ async def _(event: MessageEvent, players=CommandPlayer(), msg: Message = Command
             except Exception as e:
                 logger.info('原神幽境危战战报', '➤➤➤', {}, f'制图出错:{e}', False)
                 msg += F'UID{player.uid}制图时出错：{e}\n'
+
     await hard_challenge.finish(msg)
 
 
