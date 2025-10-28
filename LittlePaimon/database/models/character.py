@@ -263,7 +263,7 @@ class Character(Model):
     """好感等级"""
     element: ElementType = fields.CharField(max_length=2, null=True)
     """元素"""
-    region: RegionType = fields.CharField(max_length=2, null=True)
+    region: RegionType = fields.CharField(max_length=4, null=True)
     """所属地区"""
     talents: Optional[Talents] = fields.JSONField(encoder=Talents.json, decoder=Talents.parse_raw, null=True)
     """天赋"""

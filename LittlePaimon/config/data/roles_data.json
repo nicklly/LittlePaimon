@@ -31980,5 +31980,26 @@
     "element": "水",
     "skill": {},
     "attribute": {}
+  },
+  "奈芙尔": {
+    "region": "挪德卡莱",
+    "star": 5,
+    "element": "草",
+    "skill": {},
+    "attribute": {}
+  },
+  "奇偶·男性": {
+    "region": "挪德卡莱",
+    "star": 5,
+    "element": "草",
+    "skill": {},
+    "attribute": {}
+  },
+  "奇偶·女性": {
+    "region": "挪德卡莱",
+    "star": 5,
+    "element": "草",
+    "skill": {},
+    "attribute": {}
   }
 }
