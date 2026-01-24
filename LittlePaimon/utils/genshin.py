@@ -58,7 +58,7 @@ class GenshinInfoManager:
         if '更新成功' in enka_result['msg']:
             return enka_result['data']
             # return await self.get_player_info()
-        return result or enka_result['data']
+        return result
 
     async def update_from_enka(self):
         """
@@ -68,9 +68,8 @@ class GenshinInfoManager:
         data = await get_enka_data(self.uid)
         if not data:
             logger.info('原神信息', f'无法获取到<m>{self.uid}</m>的数据，可能是<r>Enka.Network接口服务出现问题</r>')
-            # return '更新失败,无法从Enka.Network获取该uid的信息，可能是接口服务出现问题，请稍候再试'
             return {
-                "msg": '更新成功',
+                "msg": '更新失败',
                 "data": '无法从Enka.Network获取该uid的信息，可能是接口服务出现问题，请稍候再试'
             }
         await PlayerInfo.update_info(self.user_id, self.uid, data['playerInfo'], 'enka')

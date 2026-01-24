@@ -32001,5 +32001,40 @@
     "element": "草",
     "skill": {},
     "attribute": {}
+  },
+  "杜林": {
+    "region": "挪德卡莱",
+    "star": 5,
+    "element": "火",
+    "skill": {},
+    "attribute": {}
+  },
+  "雅珂达": {
+    "region": "挪德卡莱",
+    "star": 4,
+    "element": "风",
+    "skill": {},
+    "attribute": {}
+  },
+  "哥伦比娅": {
+    "region": "挪德卡莱",
+    "star": 5,
+    "element": "水",
+    "skill": {},
+    "attribute": {}
+  },
+  "兹白": {
+    "region": "挪德卡莱",
+    "star": 5,
+    "element": "岩",
+    "skill": {},
+    "attribute": {}
+  },
+  "叶洛亚": {
+    "region": "挪德卡莱",
+    "star": 4,
+    "element": "岩",
+    "skill": {},
+    "attribute": {}
   }
 }

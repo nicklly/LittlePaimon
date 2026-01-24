@@ -34,8 +34,20 @@ async def get_avatar(qid: str, size: Tuple[int, int] = (146, 146)) -> PMImage:
 async def draw_character_info(avatarId: dict) -> Optional[PMImage]:
     if avatarId is None:
         return None
-    role_id = avatarId['avatarId']
+
+    role_id = str(avatarId['avatarId'])
     role_name = get_name_by_id(str(role_id))
+
+    if role_id in ['10000117', '10000118']:
+        icon_map = {
+            '10000117': 'UI_AvatarIcon_MannequinBoy',
+            '10000118': 'UI_AvatarIcon_MannequinGirl',
+        }
+        chara_icon = icon_map.get(role_id)
+        Avatar_Path = RESOURCE_BASE_PATH / 'avatar' / f'{chara_icon}.png'
+    else:
+        chara_icon = get_chara_icon(name=role_name)
+        Avatar_Path = RESOURCE_BASE_PATH / 'avatar' / f'{chara_icon}.png'
 
     if role_name in ['空', '荧']:
         role_name = '旅行者'
@@ -55,13 +67,12 @@ async def draw_character_info(avatarId: dict) -> Optional[PMImage]:
     await img.paste(img_bg, (5, 5))
 
     # 角色头像
-    faceQ_path = RESOURCE_BASE_PATH / 'avatar' / 'faceQ' / f'{role_id}.png'
-    avatar_path = RESOURCE_BASE_PATH / 'avatar' / f'{get_chara_icon(name=get_name_by_id(role_id))}.png'
-    if os.path.isfile(faceQ_path):
-        avatar = PMImage(await load_image(faceQ_path, mode='RGBA'))
+    FaceQ_Path = RESOURCE_BASE_PATH / 'avatar' / 'faceQ' / f'{role_id}.png'
+    if os.path.isfile(FaceQ_Path):
+        avatar = PMImage(await load_image(FaceQ_Path, mode='RGBA'))
         await avatar.to_circle('circle')
     else:
-        avatar = PMImage(await load_image(avatar_path, mode='RGBA'))
+        avatar = PMImage(await load_image(Avatar_Path, mode='RGBA'))
         await avatar.to_circle('circle')
 
     await avatar.resize((210, 210))
@@ -90,8 +101,6 @@ async def draw_character_info(avatarId: dict) -> Optional[PMImage]:
 
 async def draw_char_info_bag(player: Player, PlayerInfo: dict):
 
-    # 确定角色行数，4个为一行
-    # row = math.ceil(len(characters) / 5)
     img = PMImage(await load_image(RESOURCES / 'bg.png'))
     await img.resize((1920, 1050))
     # 左右拉伸
@@ -119,8 +128,8 @@ async def draw_char_info_bag(player: Player, PlayerInfo: dict):
     await asyncio.gather(
         *[img.paste(
             await draw_character_info(PlayerInfo['avatarInfoList'][i]),
-            (47 + 266 * (i % 7),
-             400 + 300 * (i // 7))) for i in range(len(PlayerInfo['playerInfo']['showAvatarInfoList']))]
+            (47 + 266 * (i % 6),
+             400 + 300 * (i // 6))) for i in range(len(PlayerInfo['playerInfo']['showAvatarInfoList']))]
     )
 
     return MessageBuild.Image(img, quality=100, mode='RGB')

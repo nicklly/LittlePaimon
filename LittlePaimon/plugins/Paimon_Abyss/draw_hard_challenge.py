@@ -39,9 +39,9 @@ async def draw_floor_team(bg: PMImage, characters: List[Abyss2Info], y_offset: i
 
     # 绘制4个角色
     for i, chara in enumerate(characters[:4]):
-        avatar_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'icon' / f"star{chara.rarity}.png"), mode='RGBA')
+        avatar_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'icon' / f"{chara.rarity}starbox.png"), mode='RGBA')
         rank = await load_image(RESOURCE_BASE_PATH / 'icon' / f"level_hywh_{chara.rank}.png", size=(25, 30))
-        await avatar_bg.resize((140, 145))
+        await avatar_bg.resize((140, 175))
         x_pos = 60 + i * (card_width + 10)
         # 角色头像
         if chara.icon:
@@ -50,8 +50,9 @@ async def draw_floor_team(bg: PMImage, characters: List[Abyss2Info], y_offset: i
                 element = PMImage(await load_image(RESOURCE_BASE_PATH / 'icon' / f"{element_type[chara.element]}.png"), mode='RGBA')
                 await avatar.resize((130, 135))
                 await avatar_bg.paste(avatar, (5, 5))
-                await avatar_bg.paste(rank, (115, 115))
+                await avatar_bg.paste(rank, (115, 110))
                 await avatar_bg.paste(element, (108, 5))
+                await avatar_bg.text(f'LV.{chara.level}', 30, 140, fm.get('SourceHanSansCN-Bold.otf', 30), '#252525')
             except:
                 pass
         # 角色信息
@@ -128,7 +129,7 @@ async def draw_hard_challenge_card(info: Hard_Challenge_Info):
     # 标题文字
     await bg.text('幽境危战', 36, 29, fm.get('优设标题黑', 108), '#40342d')
     # UID和昵称
-    await bg.text(f'UID{info.uid}', 1040, 114, fm.get('bahnschrift_regular.ttf', 36), '#40342d', 'right')
+    await bg.text(f'UID{info.uid}', 1040, 114, fm.get('bahnschrift_bold', 36), '#252525', 'right')
 
     # 战绩速览标题
     await bg.paste(orange_line, (40, 164))
