@@ -32036,5 +32036,12 @@
     "element": "岩",
     "skill": {},
     "attribute": {}
+  },
+  "法尔伽": {
+    "region": "蒙德",
+    "star": 5,
+    "element": "风",
+    "skill": {},
+    "attribute": {}
   }
 }

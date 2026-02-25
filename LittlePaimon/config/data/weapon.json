@@ -237,6 +237,7 @@
     "2320082227": "虹蛇的雨弦",
     "1441327747": "帷间夜曲",
     "1573692171": "朏魄含光",
+    "3121311955": "狼的武功歌",
     "4137694339": "(test)竿测试",
     "2719832059": "(test)穿模测试",
     "500987603": "(test)穿模测试",
@@ -341,6 +342,7 @@
     "山王长牙": "双手剑",
     "焚曜千阳": "双手剑",
     "拾慧铸熔": "双手剑",
+    "狼的武功歌": "双手剑",
     "新手长枪": "长柄武器",
     "铁尖枪": "长柄武器",
     "白缨枪": "长柄武器",
@@ -716,6 +718,7 @@
     "黎明破晓之史": "UI_EquipIcon_Bow_Arianna",
     "朏魄含光": "UI_EquipIcon_Sword_SilverwareSaw",
     "帷间夜曲": "UI_EquipIcon_Catalyst_Brisingamen",
+    "狼的武功歌": "UI_EquipIcon_Claymore_EnsisAquilonis",
     "(test)竿测试": "UI_EquipIcon_FishingRod",
     "(test)穿模测试": "UI_EquipIcon_Bow_Template"
   }
