@@ -18,11 +18,11 @@ week_cn = {
     'saturday':  '周六',
 }
 
-MATERIAL_URL = 'https://api.ambr.top/v2/chs/material'
-CHARACTER_URL = 'https://api.ambr.top/v2/chs/avatar'
-WEAPON_URL = 'https://api.ambr.top/v2/chs/weapon'
-DAILY_URL = 'https://api.ambr.top/v2/chs/dailyDungeon'
-UPGRADE_URL = 'https://api.ambr.top/v2/static/upgrade'
+MATERIAL_URL = 'https://gi.yatta.moe/api/v2/chs/material'
+CHARACTER_URL = 'https://gi.yatta.moe/api/v2/chs/avatar'
+WEAPON_URL = 'https://gi.yatta.moe/api/v2/chs/weapon'
+DAILY_URL = 'https://gi.yatta.moe/api/v2/chs/dailyDungeon'
+UPGRADE_URL = 'https://gi.yatta.moe/api/v2/chs/upgrade'
 
 
 async def get_daily_material():

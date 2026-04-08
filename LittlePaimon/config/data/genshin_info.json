@@ -3589,9 +3589,9 @@
       11285
     ],
     "Skills": {
-      "11241": "Skill_A_04",
-      "11242": "Skill_S_Varka_01",
-      "11245": "Skill_E_Varka_01"
+      "11281": "Skill_A_04",
+      "11282": "Skill_S_Varka_01",
+      "11285": "Skill_E_Varka_01"
     },
     "ProudMap": {
       "11281": 12831,
@@ -3602,6 +3602,36 @@
     "SideIconName": "UI_AvatarIcon_Side_Varka",
     "QualityType": "QUALITY_ORANGE",
     "WeaponType": "WEAPON_CLAYMORE"
+  },
+  "10000130": {
+    "Element": "Rock",
+    "Consts": [
+      "UI_Talent_S_Linnea_01",
+      "UI_Talent_S_Linnea_02",
+      "UI_Talent_U_Linnea_01",
+      "UI_Talent_S_Linnea_03",
+      "UI_Talent_U_Linnea_02",
+      "UI_Talent_S_Linnea_04"
+    ],
+    "SkillOrder": [
+      11301,
+      11302,
+      11305
+    ],
+    "Skills": {
+      "11301": "Skill_A_02",
+      "11302": "Skill_S_Linnea_01",
+      "11305": "Skill_E_Linnea_01"
+    },
+    "ProudMap": {
+      "11301": 13031,
+      "11302": 13032,
+      "11305": 13039
+    },
+    "NameTextMapHash": 1961019898,
+    "SideIconName": "UI_AvatarIcon_Side_Linnea",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_BOW"
   },
   "10000901": {
     "Element": "Fire",

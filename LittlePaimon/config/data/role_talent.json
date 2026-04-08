@@ -707,7 +707,13 @@
     "1283": "「朋友，莫要再饮令人落泪的苦酒」",
     "1284": "「因为无人能夺去我们歌唱的自由」",
     "1285": "「斟满杯中佳酿吧，暴君来了又去」",
-    "1286": "「我心爱的蒙德呀，依然屹立如初」"
+    "1286": "「我心爱的蒙德呀，依然屹立如初」",
+    "1301": "未完成的分类",
+    "1302": "喜或悲的谕告",
+    "1303": "热闹的记录页",
+    "1304": "专家的直感觉",
+    "1305": "仙乡的赠别礼",
+    "1306": "黄金猎犬之梦"
   },
   "Icon": {
     "21": "UI_Talent_S_Ayaka_01",
@@ -1358,12 +1364,12 @@
     "1174": "UI_Talent_S_Ineffa_03",
     "1175": "UI_Talent_U_Ineffa_02",
     "1176": "UI_Talent_S_Ineffa_04",
-    "1181": "UI_Talent_S_Lauma_01",
-    "1182": "UI_Talent_S_Lauma_02",
-    "1183": "UI_Talent_U_Lauma_01",
-    "1184": "UI_Talent_S_Lauma_03",
-    "1185": "UI_Talent_U_Lauma_02",
-    "1186": "UI_Talent_S_Lauma_04",
+    "1191": "UI_Talent_S_Lauma_01",
+    "1192": "UI_Talent_S_Lauma_02",
+    "1193": "UI_Talent_U_Lauma_01",
+    "1194": "UI_Talent_S_Lauma_03",
+    "1195": "UI_Talent_U_Lauma_02",
+    "1196": "UI_Talent_S_Lauma_04",
     "1201": "UI_Talent_S_Flins_01",
     "1202": "UI_Talent_S_Flins_02",
     "1203": "UI_Talent_U_Flins_01",
@@ -1417,6 +1423,12 @@
     "1283": "UI_Talent_U_Varka_01",
     "1284": "UI_Talent_S_Varka_03",
     "1285": "UI_Talent_U_Varka_02",
-    "1286": "UI_Talent_S_Varka_04"
+    "1286": "UI_Talent_S_Varka_04",
+    "1301": "UI_Talent_S_Linnea_01",
+    "1302": "UI_Talent_S_Linnea_02",
+    "1303": "UI_Talent_U_Linnea_01",
+    "1304": "UI_Talent_S_Linnea_03",
+    "1305": "UI_Talent_U_Linnea_02",
+    "1306": "UI_Talent_S_Linnea_04"
   }
 }

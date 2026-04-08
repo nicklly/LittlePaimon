@@ -347,17 +347,15 @@ async def _(event: MessageEvent, state: T_State, uid=CommandUID(), players=Comma
         gim = GenshinInfoManager(str(event.user_id), uid)
         try:
             for player in players:
-                gmi = await gim.update_all(include_talent)
-                player_info: dict = gmi
-                try:
-                    img = await draw_char_info_bag(player, player_info)
-                    result += img
-                except Exception as e:
-                    result += f'制图失败, 错误信息: {e}'
+                result = await gim.update_all(include_talent)
+                print(result)
+                player_info: dict = result
+                img = await draw_char_info_bag(player, player_info)
+                result = img
         except KeyError as e:
-            result += f'更新失败，缺少{e}的数据，可能是Enka.Network接口出现问题'
+            result = f'更新失败，缺少{e}的数据，可能是Enka.Network接口出现问题'
         except Exception as e:
-            result += f'更新失败，错误信息：{e}'
+            result = f'更新失败，错误信息：{e}'
         finally:
             running_udi.remove(f'{event.user_id}-{uid}')
         await update_info.finish(result, at_sender=True)

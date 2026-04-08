@@ -53,12 +53,10 @@ class GenshinInfoManager:
                 result += '天赋数据：未绑定私人Cookie\n'
 
         enka_result = await self.update_from_enka()
-        # result += f'Enka数据：{enka_result}'
-        result += f'{enka_result}'
         if '更新成功' in enka_result['msg']:
-            return enka_result['data']
+             return enka_result['data']
             # return await self.get_player_info()
-        return result
+        return enka_result['data']
 
     async def update_from_enka(self):
         """
