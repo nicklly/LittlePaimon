@@ -84,7 +84,7 @@ async def get_stoken(aigis: str = '', data: dict = None):
 
 async def create_login_data():
     device_id = ''.join(random.choices((ascii_letters + digits), k=64))
-    app_id = '7'
+    app_id = '2'
     data = {'app_id': app_id,
             'device': device_id}
     res = await aiorequests.post('https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/fetch?',
@@ -109,9 +109,13 @@ async def check_login(login_data: dict):
     return res.json()
 
 
-async def get_cookie_token(game_token: dict):
+async def get_cookie_token(game_token: dict, stoken):
     res = await aiorequests.get(
-        f"https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoByGameToken?game_token={game_token['token']}&account_id={game_token['uid']}")
+        url=f"https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken?stoken={game_token['token']}&account_id={game_token['uid']}",
+        headers={
+            "cookie": stoken
+        }
+    )
     return res.json()
 
 
@@ -159,9 +163,10 @@ async def check_qrcode():
             elif status_data['data']['stat'] == 'Confirmed':
                 game_token = json.loads(status_data['data']['payload']['raw'])
                 running_login_data.pop(user_id)
-                cookie_token_data = await get_cookie_token(game_token)
                 stoken_data = await get_stoken(data={'account_id': int(game_token['uid']),
                                                      'game_token': game_token['token']})
+                stoken = f"stoken={stoken_data['data']['token']['token']};stuid={stoken_data['data']['user_info']['aid']};mid={stoken_data['data']['user_info']['mid']}"
+                cookie_token_data = await get_cookie_token(game_token, stoken)
                 mys_id = stoken_data['data']['user_info']['aid']
                 mid = stoken_data['data']['user_info']['mid']
                 cookie_token = cookie_token_data['data']['cookie_token']
