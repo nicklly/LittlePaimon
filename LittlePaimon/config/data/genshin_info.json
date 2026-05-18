@@ -3543,36 +3543,6 @@
     "QualityType": "QUALITY_ORANGE",
     "WeaponType": "WEAPON_POLE"
   },
-  "10000901": {
-    "Element": "Fire",
-    "Consts": [
-      "UI_Talent_S_Xiangling_01",
-      "UI_Talent_S_Xiangling_02",
-      "UI_Talent_U_Xiangling_02",
-      "UI_Talent_S_Xiangling_03",
-      "UI_Talent_U_Xiangling_01",
-      "UI_Talent_S_Xiangling_04"
-    ],
-    "SkillOrder": [
-      10231,
-      10232,
-      10235
-    ],
-    "Skills": {
-      "10231": "Skill_A_03",
-      "10232": "Skill_S_Xiangling_01",
-      "10235": "Skill_E_Xiangling_01"
-    },
-    "ProudMap": {
-      "10231": 2331,
-      "10232": 2332,
-      "10235": 2339
-    },
-    "NameTextMapHash": 3293134650,
-    "SideIconName": "UI_AvatarIcon_Side_Mavuika",
-    "QualityType": "QUALITY_ORANGE",
-    "WeaponType": "WEAPON_CLAYMORE"
-  },
   "10000128": {
     "Element": "Wind",
     "Consts": [
@@ -3602,6 +3572,36 @@
     "SideIconName": "UI_AvatarIcon_Side_Varka",
     "QualityType": "QUALITY_ORANGE",
     "WeaponType": "WEAPON_CLAYMORE"
+  },
+  "10000129": {
+    "Element": "Ice",
+    "Consts": [
+      "UI_Talent_S_Lohen_01",
+      "UI_Talent_S_Lohen_02",
+      "UI_Talent_U_Lohen_01",
+      "UI_Talent_S_Lohen_03",
+      "UI_Talent_U_Lohen_02",
+      "UI_Talent_S_Lohen_04"
+    ],
+    "SkillOrder": [
+      11291,
+      11292,
+      11295
+    ],
+    "Skills": {
+      "11291": "Skill_A_04",
+      "11292": "Skill_S_Lohen_01",
+      "11295": "Skill_E_Lohen_01"
+    },
+    "ProudMap": {
+      "11291": 12931,
+      "11292": 12932,
+      "11295": 12939
+    },
+    "NameTextMapHash": 2872823194,
+    "SideIconName": "UI_AvatarIcon_Side_Lohen",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_POLE"
   },
   "10000130": {
     "Element": "Rock",
@@ -3633,35 +3633,65 @@
     "QualityType": "QUALITY_ORANGE",
     "WeaponType": "WEAPON_BOW"
   },
-  "10000901": {
+  "10000131": {
     "Element": "Fire",
     "Consts": [
-      "UI_Talent_S_Xiangling_01",
-      "UI_Talent_S_Xiangling_02",
-      "UI_Talent_U_Xiangling_02",
-      "UI_Talent_S_Xiangling_03",
-      "UI_Talent_U_Xiangling_01",
-      "UI_Talent_S_Xiangling_04"
+      "UI_Talent_S_Nicole_01",
+      "UI_Talent_S_Nicole_02",
+      "UI_Talent_U_Nicole_01",
+      "UI_Talent_S_Nicole_03",
+      "UI_Talent_U_Nicole_02",
+      "UI_Talent_S_Nicole_04"
     ],
     "SkillOrder": [
-      10231,
-      10232,
-      10235
+      11311,
+      11312,
+      11315
     ],
     "Skills": {
-      "10231": "Skill_A_03",
-      "10232": "Skill_S_Xiangling_01",
-      "10235": "Skill_E_Xiangling_01"
+      "11311": "Skill_A_Catalyst_MD",
+      "11312": "Skill_S_Nicole_01",
+      "11315": "Skill_E_Nicole_01"
     },
     "ProudMap": {
-      "10231": 2331,
-      "10232": 2332,
-      "10235": 2339
+      "11311": 13131,
+      "11312": 13132,
+      "11315": 13139
     },
-    "NameTextMapHash": 3293134650,
-    "SideIconName": "UI_AvatarIcon_Side_Mavuika",
+    "NameTextMapHash": 1711582634,
+    "SideIconName": "UI_AvatarIcon_Side_Nicole",
     "QualityType": "QUALITY_ORANGE",
-    "WeaponType": "WEAPON_CLAYMORE"
+    "WeaponType": "WEAPON_CATALYST"
+  },
+  "10000132": {
+    "Element": "Wind",
+    "Consts": [
+      "UI_Talent_S_Prune_01",
+      "UI_Talent_S_Prune_02",
+      "UI_Talent_U_Prune_01",
+      "UI_Talent_S_Prune_03",
+      "UI_Talent_U_Prune_02",
+      "UI_Talent_S_Prune_04"
+    ],
+    "SkillOrder": [
+      11321,
+      11322,
+      11325
+    ],
+    "Skills": {
+      "11321": "Skill_A_Catalyst_MD",
+      "11322": "Skill_S_Prune_01",
+      "11325": "Skill_E_Prune_01"
+    },
+    "ProudMap": {
+      "11321": 13231,
+      "11322": 13232,
+      "11325": 13239
+    },
+    "NameTextMapHash": 2787504450,
+    "SideIconName": "UI_AvatarIcon_Side_Prune",
+    "QualityType": "QUALITY_PURPLE",
+    "WeaponType": "WEAPON_CATALYST"
   },
   "10000902": {
     "Element": "Fire",
@@ -3692,6 +3722,36 @@
     "SideIconName": "UI_AvatarIcon_Side_Hutao",
     "QualityType": "QUALITY_ORANGE",
     "WeaponType": "WEAPON_POLE"
+  },
+  "10000901": {
+    "Element": "Fire",
+    "Consts": [
+      "UI_Talent_S_Xiangling_01",
+      "UI_Talent_S_Xiangling_02",
+      "UI_Talent_U_Xiangling_02",
+      "UI_Talent_S_Xiangling_03",
+      "UI_Talent_U_Xiangling_01",
+      "UI_Talent_S_Xiangling_04"
+    ],
+    "SkillOrder": [
+      10231,
+      10232,
+      10235
+    ],
+    "Skills": {
+      "10231": "Skill_A_03",
+      "10232": "Skill_S_Xiangling_01",
+      "10235": "Skill_E_Xiangling_01"
+    },
+    "ProudMap": {
+      "10231": 2331,
+      "10232": 2332,
+      "10235": 2339
+    },
+    "NameTextMapHash": 3293134650,
+    "SideIconName": "UI_AvatarIcon_Side_Mavuika",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_CLAYMORE"
   },
   "10000903": {
     "Element": "Electric",
