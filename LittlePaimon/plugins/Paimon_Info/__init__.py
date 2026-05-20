@@ -348,7 +348,6 @@ async def _(event: MessageEvent, state: T_State, uid=CommandUID(), players=Comma
         try:
             for player in players:
                 result = await gim.update_all(include_talent)
-                print(result)
                 player_info: dict = result
                 img = await draw_char_info_bag(player, player_info)
                 result = img
