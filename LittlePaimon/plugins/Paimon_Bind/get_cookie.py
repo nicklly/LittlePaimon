@@ -27,6 +27,9 @@ from LittlePaimon.utils.api import get_bind_game_info
 from LittlePaimon.utils.message import fullmatch_rule
 
 CN_DS_SALT = 'JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS'
+CN_DS_SALT_V2 = 'OvOIsZRXrUbXoUlpQuhEx4tgAwNVUMmp'
+BBS_VERSION = '2.102.1'
+
 bind_tips = '绑定方法二选一：\n1.通过米游社扫码绑定：\n请发送指令[原神扫码绑定]\n2.通过Cookie绑定：获取教程\ndocs.qq.com/doc/DQ3JLWk1vQVllZ2Z1\n获取后，使用[ysb cookie]指令绑定'
 bind_tips_web = '绑定方法二选一：\n1.通过米游社扫码绑定：\n请发送指令[原神扫码绑定]\n2.通过Cookie绑定：获取教程\ndocs.qq.com/doc/DQ3JLWk1vQVllZ2Z1\n获取后，使用[ysb cookie]指令绑定或前往{cookie_web_url}网页添加绑定'
 
@@ -36,85 +39,89 @@ running_login_data = {}
 def md5_(self) -> str:
     return md5(self.encode()).hexdigest()
 
-
-def get_ds(body=None, query=None) -> str:
+def get_ds(salt_version=CN_DS_SALT, body=None, query=None) -> str:
     t = int(time.time())
     r = ''.join(random.choices(ascii_letters, k=6))
     b = json.dumps(body) if body else ''
     q = '&'.join((f"{k}={v}" for k, v in sorted(query.items()))) if query else ''
-    h = md5_(f"salt={CN_DS_SALT}&t={t}&r={r}&b={b}&q={q}")
+    h = md5_(f"salt={salt_version}&t={t}&r={r}&b={b}&q={q}")
     return f"{t},{r},{h}"
 
 
 async def get_stoken(aigis: str = '', data: dict = None):
     if data is None:
         data = {}
-    resp = await aiorequests.post('https://passport-api.mihoyo.com/account/ma-cn-session/app/getTokenByGameToken',
-                                  headers={'x-rpc-app_version':  '2.41.0',
-                                           'DS':                 get_ds(data),
-                                           'x-rpc-aigis':        aigis,
-                                           'Content-Type':       'application/json',
-                                           'Accept':             'application/json',
-                                           'x-rpc-game_biz':     'bbs_cn',
-                                           'x-rpc-sys_version':  '11',
-                                           'x-rpc-device_id':    uuid.uuid4().hex,
-                                           'x-rpc-device_fp':    ''.join(
-                                               random.choices((ascii_letters + digits), k=13)),
-                                           'x-rpc-device_name':  'Chrome 108.0.0.0',
-                                           'x-rpc-device_model': 'Windows 10 64-bit',
-                                           'x-rpc-app_id':       'bll8iq97cem8',
-                                           'x-rpc-client_type':  '4',
-                                           'User-Agent':         'okhttp/4.8.0'},
-                                  json=data)
+    resp = await aiorequests.post(
+        'https://api-takumi.mihoyo.com/account/ma-cn-session/app/getTokenByGameToken',
+        #'https://passport-api.mihoyo.com/account/ma-cn-session/app/getTokenByGameToken',
+         headers = {
+            'x-rpc-app_version':  f'{BBS_VERSION}',
+            'DS':                 get_ds(salt_version=CN_DS_SALT_V2, body=data),
+            'x-rpc-aigis':        aigis,
+            'Content-Type':       'application/json',
+            'Accept':             'application/json',
+            'x-rpc-game_biz':     'bbs_cn',
+            'x-rpc-sys_version':  '12',
+            'x-rpc-device_id':    uuid.uuid4().hex,
+            'x-rpc-device_fp':    ''.join(random.choices((ascii_letters + digits), k=13)),
+            'x-rpc-device_name':  'Chrome 108.0.0.0',
+            'x-rpc-device_model': 'Windows 10 64-bit',
+            'x-rpc-app_id':       'bll8iq97cem8',
+            'x-rpc-client_type':  '4',
+            'User-Agent':         f'Mozilla/5.0 (Linux; Android 12) Mobile miHoYoBBS/{BBS_VERSION}'
+         },
+         json=data
+    )
     return resp.json()
-
-
-# def generate_qrcode(url):
-#     qr = qrcode.QRCode(version=1,
-#                        error_correction=qrcode.constants.ERROR_CORRECT_L,
-#                        box_size=10,
-#                        border=4)
-#     qr.add_data(url)
-#     qr.make(fit=True)
-#     img = qr.make_image(fill_color='black', back_color='white')
-#     bio = BytesIO()
-#     img.save(bio)
-#     return f'base64://{base64.b64encode(bio.getvalue()).decode()}'
-
 
 async def create_login_data():
     device_id = ''.join(random.choices((ascii_letters + digits), k=64))
-    app_id = '2'
-    data = {'app_id': app_id,
-            'device': device_id}
-    res = await aiorequests.post('https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/fetch?',
-                                 json=data)
+    app_id = '7'
+    data = {
+        'app_id': app_id,
+        'device': device_id
+    }
+    res = await aiorequests.post(
+        'https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/fetch?',
+        json=data
+    )
     url = res.json()['data']['url']
     ticket = url.split('ticket=')[1]
-    return {'app_id': app_id,
-            'ticket': ticket,
-            'device': device_id,
-            'url':    url}
+    return {
+        'app_id': app_id,
+        'ticket': ticket,
+        'device': device_id,
+        'url':    url
+    }
 
 
 async def check_login(login_data: dict):
-    data = {'app_id': login_data['app_id'],
-            'ticket': login_data['ticket'],
-            'device': login_data['device']}
-    res = await aiorequests.post('https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/query?',
-                                 headers={
-                                     'x-rpc-device_id': login_data['device']
-                                 },
-                                 json=data)
+    data = {
+        'app_id': login_data['app_id'],
+        'ticket': login_data['ticket'],
+        'device': login_data['device']
+    }
+    res = await aiorequests.post(
+        'https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/query?',
+         headers = {
+            'x-rpc-device_id': login_data['device']
+         },
+         json=data
+    )
     return res.json()
 
 
 async def get_cookie_token(game_token: dict, stoken):
+    data = {
+        "stoken": game_token['token'],
+        "account_id": game_token['uid']
+    }
     res = await aiorequests.get(
-        url=f"https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken?stoken={game_token['token']}&account_id={game_token['uid']}",
-        headers={
+        url=f"https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken?",
+        headers = {
             "cookie": stoken
-        }
+        },
+        params=data
     )
     return res.json()
 
@@ -163,8 +170,15 @@ async def check_qrcode():
             elif status_data['data']['stat'] == 'Confirmed':
                 game_token = json.loads(status_data['data']['payload']['raw'])
                 running_login_data.pop(user_id)
-                stoken_data = await get_stoken(data={'account_id': int(game_token['uid']),
-                                                     'game_token': game_token['token']})
+                stoken_data = await get_stoken(
+                    data = {
+                        'account_id': int(game_token['uid']),
+                        'game_token': game_token['token']
+                    }
+                )
+                if stoken_data['data'] is None:
+                    send_msg = f"绑定帐号失败: {stoken_data['message']}"
+
                 stoken = f"stoken={stoken_data['data']['token']['token']};stuid={stoken_data['data']['user_info']['aid']};mid={stoken_data['data']['user_info']['mid']}"
                 cookie_token_data = await get_cookie_token(game_token, stoken)
                 mys_id = stoken_data['data']['user_info']['aid']
