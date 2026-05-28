@@ -5,7 +5,6 @@ import datetime
 import json
 import random
 import time
-import uuid
 import base64
 from hashlib import md5
 from io import BytesIO
@@ -28,7 +27,9 @@ from LittlePaimon.utils.message import fullmatch_rule
 
 CN_DS_SALT = 'JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS'
 CN_DS_SALT_V2 = 'OvOIsZRXrUbXoUlpQuhEx4tgAwNVUMmp'
-BBS_VERSION = '2.102.1'
+BBS_VERSION = '2.104.0'
+device_id = "".join(random.choices((ascii_letters + digits), k=64))
+
 
 bind_tips = '绑定方法二选一：\n1.通过米游社扫码绑定：\n请发送指令[原神扫码绑定]\n2.通过Cookie绑定：获取教程\ndocs.qq.com/doc/DQ3JLWk1vQVllZ2Z1\n获取后，使用[ysb cookie]指令绑定'
 bind_tips_web = '绑定方法二选一：\n1.通过米游社扫码绑定：\n请发送指令[原神扫码绑定]\n2.通过Cookie绑定：获取教程\ndocs.qq.com/doc/DQ3JLWk1vQVllZ2Z1\n获取后，使用[ysb cookie]指令绑定或前往{cookie_web_url}网页添加绑定'
@@ -47,79 +48,60 @@ def get_ds(salt_version=CN_DS_SALT, body=None, query=None) -> str:
     h = md5_(f"salt={salt_version}&t={t}&r={r}&b={b}&q={q}")
     return f"{t},{r},{h}"
 
-
-async def get_stoken(aigis: str = '', data: dict = None):
-    if data is None:
-        data = {}
-    resp = await aiorequests.post(
-        'https://api-takumi.mihoyo.com/account/ma-cn-session/app/getTokenByGameToken',
-        #'https://passport-api.mihoyo.com/account/ma-cn-session/app/getTokenByGameToken',
-         headers = {
-            'x-rpc-app_version':  f'{BBS_VERSION}',
-            'DS':                 get_ds(salt_version=CN_DS_SALT_V2, body=data),
-            'x-rpc-aigis':        aigis,
-            'Content-Type':       'application/json',
-            'Accept':             'application/json',
-            'x-rpc-game_biz':     'bbs_cn',
-            'x-rpc-sys_version':  '12',
-            'x-rpc-device_id':    uuid.uuid4().hex,
-            'x-rpc-device_fp':    ''.join(random.choices((ascii_letters + digits), k=13)),
-            'x-rpc-device_name':  'Chrome 108.0.0.0',
-            'x-rpc-device_model': 'Windows 10 64-bit',
-            'x-rpc-app_id':       'bll8iq97cem8',
-            'x-rpc-client_type':  '4',
-            'User-Agent':         f'Mozilla/5.0 (Linux; Android 12) Mobile miHoYoBBS/{BBS_VERSION}'
-         },
-         json=data
-    )
-    return resp.json()
-
 async def create_login_data():
-    device_id = ''.join(random.choices((ascii_letters + digits), k=64))
-    app_id = '7'
-    data = {
-        'app_id': app_id,
-        'device': device_id
-    }
     res = await aiorequests.post(
-        'https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/fetch?',
-        json=data
+        'https://passport-api.mihoyo.com/account/ma-cn-passport/app/createQRLogin?',
+        headers = {
+            "User-Agent": "HYPContainer/1.3.3.182",
+            "x-rpc-app_id": "ddxf5dufpuyo",
+            "x-rpc-client_type": "3",
+            "x-rpc-device_id": device_id,
+        }
     )
-    url = res.json()['data']['url']
-    ticket = url.split('ticket=')[1]
+    result = res.json()
+    url = result['data']['url']
+    ticket = result['data']['ticket']
     return {
-        'app_id': app_id,
         'ticket': ticket,
-        'device': device_id,
         'url':    url
     }
 
 
 async def check_login(login_data: dict):
-    data = {
-        'app_id': login_data['app_id'],
-        'ticket': login_data['ticket'],
-        'device': login_data['device']
-    }
     res = await aiorequests.post(
-        'https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/query?',
-         headers = {
-            'x-rpc-device_id': login_data['device']
-         },
-         json=data
+        f"https://passport-api.mihoyo.com/account/ma-cn-passport/app/queryQRLoginStatus?",
+        headers = {
+            "User-Agent": "HYPContainer/1.3.3.182",
+            "x-rpc-app_id": "ddxf5dufpuyo",
+            "x-rpc-client_type": "3",
+            "x-rpc-device_id": device_id,
+        },
+        json = {
+            'ticket': login_data['ticket']
+        }
     )
     return res.json()
 
 
-async def get_cookie_token(game_token: dict, stoken):
-    data = {
-        "stoken": game_token['token'],
-        "account_id": game_token['uid']
-    }
+async def get_cookie_token(aigis : str = '', data: dict = None, stoken: str = ''):
     res = await aiorequests.get(
         url=f"https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken?",
         headers = {
-            "cookie": stoken
+            'x-rpc-app_version':  f'{BBS_VERSION}',
+            'DS':                 get_ds(salt_version=CN_DS_SALT, body=data),
+            'x-rpc-aigis':        aigis,
+            'Content-Type':       'application/json',
+            'Accept':             'application/json',
+            'x-rpc-game_biz':     'bbs_cn',
+            'x-rpc-sys_version':  '12',
+            'x-rpc-device_id':    device_id,
+            'x-rpc-device_fp':    ''.join(random.choices((ascii_letters + digits), k=13)),
+            'x-rpc-device_name':  'Chrome 108.0.0.0',
+            'x-rpc-device_model': 'Windows 10 64-bit',
+            'x-rpc-app_id':       'bll8iq97cem8',
+            'x-rpc-client_type':  '2',
+            'User-Agent':         'Hyperion/550 CFNetwork/3860.500.112 Darwin/25.4.0',
+            'Cookie':             stoken
         },
         params=data
     )
@@ -167,42 +149,47 @@ async def check_qrcode():
             if status_data['retcode'] != 0:
                 send_msg = status_data['message']
                 running_login_data.pop(user_id)
-            elif status_data['data']['stat'] == 'Confirmed':
-                game_token = json.loads(status_data['data']['payload']['raw'])
+            elif status_data['data']['status'] == 'Confirmed':
+                game_token = status_data['data']
                 running_login_data.pop(user_id)
-                stoken_data = await get_stoken(
-                    data = {
-                        'account_id': int(game_token['uid']),
-                        'game_token': game_token['token']
-                    }
-                )
-                if stoken_data['data'] is None:
-                    send_msg = f"绑定帐号失败: {stoken_data['message']}"
 
-                stoken = f"stoken={stoken_data['data']['token']['token']};stuid={stoken_data['data']['user_info']['aid']};mid={stoken_data['data']['user_info']['mid']}"
-                cookie_token_data = await get_cookie_token(game_token, stoken)
-                mys_id = stoken_data['data']['user_info']['aid']
-                mid = stoken_data['data']['user_info']['mid']
+                stoken = f"stoken={game_token['tokens'][0]['token']};stuid={game_token['user_info']['aid']};mid={game_token['user_info']['mid']}"
+                token = {
+                    'uid': int(game_token['user_info']['aid']),
+                    'mid': game_token['user_info']['mid'],
+                    'stoken': game_token['tokens'][0]['token']
+                }
+
+                cookie_token_data = await get_cookie_token(data=token, stoken=stoken)
+                mys_id = cookie_token_data['data']['uid']
                 cookie_token = cookie_token_data['data']['cookie_token']
-                stoken = stoken_data['data']['token']['token']
+
                 if game_info := await get_bind_game_info(f"account_id={mys_id};cookie_token={cookie_token}", mys_id):
                     if not game_info['list']:
                         send_msg = '该账号尚未绑定任何游戏，请确认扫码的账号无误'
-                    elif not (genshin_games := [{'uid': game['game_role_id'], 'nickname': game['nickname']} for game in
-                                                game_info['list'] if game['game_id'] == 2]):
+                    elif not (genshin_games := [{'uid': game['game_role_id'], 'nickname': game['nickname']} for game in game_info['list'] if game['game_id'] == 2]):
                         send_msg = '该账号尚未绑定原神，请确认扫码的账号无误'
                     else:
                         send_msg = '成功绑定原神账号：'
                         for info in genshin_games:
                             send_msg += f'{info["nickname"]}({info["uid"]}) '
-                            await PrivateCookie.update_or_create(user_id=user_id, uid=info['uid'], mys_id=mys_id,
-                                                                 defaults={
-                                                                     'cookie': f"account_id={mys_id};cookie_token={cookie_token}",
-                                                                     'stoken': f'stuid={mys_id};stoken={stoken};mid={mid};'})
+                            await PrivateCookie.update_or_create(
+                                user_id = user_id,
+                                uid = info['uid'],
+                                mys_id = mys_id,
+                                defaults = {
+                                    'cookie': f"account_id={mys_id};cookie_token={cookie_token}",
+                                    'stoken': stoken
+                                }
+                            )
                         send_msg = send_msg.strip()
-                        await LastQuery.update_or_create(user_id=user_id,
-                                                         defaults={'uid':       genshin_games[0]['uid'],
-                                                                   'last_time': datetime.datetime.now()})
+                        await LastQuery.update_or_create(
+                            user_id = user_id,
+                            defaults = {
+                                'uid':       genshin_games[0]['uid'],
+                                'last_time': datetime.datetime.now()
+                            }
+                        )
             if send_msg:
                 bot: Bot = get_bot(str(data['bot_id']))
                 if 'group_id' in data:

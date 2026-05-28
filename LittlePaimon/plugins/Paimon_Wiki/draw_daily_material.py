@@ -85,6 +85,8 @@ async def draw_material(user_id: str, week: str = '周一'):
     await img.text(f'{week_str}角色天赋材料', 223, 69, fm.get('SourceHanSerifCN-Bold.otf', 35), 'black')
     await img.text(f'{week_str}武器突破材料', 1033, 69, fm.get('SourceHanSerifCN-Bold.otf', 35), 'black')
     star_bg = {
+        '1': await load_image(RESOURCE_BASE_PATH / 'icon' / 'star1.png', size=(110, 110)),
+        '2': await load_image(RESOURCE_BASE_PATH / 'icon' / 'star2.png', size=(110, 110)),
         '3': await load_image(RESOURCE_BASE_PATH / 'icon' / 'star3.png', size=(110, 110)),
         '4': await load_image(RESOURCE_BASE_PATH / 'icon' / 'star4.png', size=(110, 110)),
         '5': await load_image(RESOURCE_BASE_PATH / 'icon' / 'star5.png', size=(110, 110))
