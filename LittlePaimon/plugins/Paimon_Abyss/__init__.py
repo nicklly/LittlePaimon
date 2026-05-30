@@ -74,18 +74,18 @@ hard_challenge = on_command(
     }
 )
 #
-role_combat = on_command(
-    'hxzjjs',
-    aliases={'幻想真境剧诗', 'hxzjjs', '剧诗'},
-    priority=10,
-    block=True,
-    state={
-        'pm_name': 'hxzjs',
-        'pm_description': '查看本期幻想真境剧诗战报',
-        'pm_usage': 'hxzjs(uid)',
-        'pm_priority': 1,
-    }
-)
+# role_combat = on_command(
+#     'hxzjjs',
+#     aliases={'幻想真境剧诗', 'hxzjjs', '剧诗'},
+#     priority=10,
+#     block=True,
+#     state={
+#         'pm_name': 'hxzjs',
+#         'pm_description': '查看本期幻想真境剧诗战报',
+#         'pm_usage': 'hxzjs(uid)',
+#         'pm_priority': 1,
+#     }
+# )
 #
 # @role_combat.handle()
 # async def _(event: MessageEvent, players=CommandPlayer(), msg: Message = CommandArg()):
