@@ -6,6 +6,7 @@ from .genshin_voice import *
 from .manage import *
 from .abyss_info import *
 from .abyss2_info import *
+from .role_combat import *
 # from .memory_db import *
 
-from . import abyss_info, character, cookie, genshin_voice, manage, other, player_info, subscription, abyss2_info
+from . import abyss_info, character, cookie, genshin_voice, manage, other, player_info, subscription, abyss2_info, role_combat

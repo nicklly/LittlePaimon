@@ -8,7 +8,6 @@ from LittlePaimon.utils.path import GENSHIN_DB_PATH, SUB_DB_PATH, GENSHIN_VOICE_
     YSC_TEMP_IMG_PATH
 from .models import *
 
-
 DATABASE = {
     'connections': {
         'paimon_genshin':       {
@@ -35,6 +34,7 @@ DATABASE = {
                 player_info.__name__,
                 abyss_info.__name__,
                 abyss2_info.__name__,
+                role_combat.__name__,
                 character.__name__,
                 cookie.__name__
             ],

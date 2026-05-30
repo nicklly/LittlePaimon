@@ -4,7 +4,6 @@ from typing import Optional, List, Iterator, Union
 from pydantic import BaseModel
 from tortoise import fields
 from tortoise.models import Model
-from .player_info import PlayerInfo
 from LittlePaimon.utils.alias import get_chara_icon, get_name_by_id
 
 
