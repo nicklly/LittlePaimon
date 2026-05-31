@@ -73,44 +73,44 @@ hard_challenge = on_command(
         'pm_priority': 1,
     }
 )
-#
-# role_combat = on_command(
-#     'hxzjjs',
-#     aliases={'幻想真境剧诗', 'hxzjjs', '剧诗'},
-#     priority=10,
-#     block=True,
-#     state={
-#         'pm_name': 'hxzjs',
-#         'pm_description': '查看本期幻想真境剧诗战报',
-#         'pm_usage': 'hxzjs(uid)',
-#         'pm_priority': 1,
-#     }
-# )
-#
-# @role_combat.handle()
-# async def _(event: MessageEvent, players=CommandPlayer(), msg: Message = CommandArg()):
-#     logger.info('原神幻想真境剧诗战报', '开始执行')
-#     text = msg.extract_plain_text()  # 先提取文本
-#     role_combat_index = 1 if '上期' in text else 0
-#     msg = Message()
-#     for player in players:
-#         logger.info('原神幻想真境剧诗战报', '➤ ', {'用户': players[0].user_id, 'UID': players[0].uid})
-#         gim = GenshinInfoManager(player.user_id, player.uid)
-#         role_combat_info = await gim.get_role_combat_info(role_combat_index )
-#         if isinstance(role_combat_info, str):
-#             logger.info('原神幻想真境剧诗', '➤➤', {}, role_combat_info, False)
-#             msg += f'UID{player.uid} {role_combat_info}\n'
-#         else:
-#             logger.info('原神幻想真境剧诗战报', '➤➤', {}, '数据获取成功', True)
-#             try:
-#                 img = await draw_role_combat_card(role_combat_info)
-#                 logger.info('原神幻想真境剧诗战报', '➤➤➤', {}, '制图完成', True)
-#                 msg += img
-#             except Exception as e:
-#                 logger.info('原神幻想真境剧诗战报', '➤➤➤', {}, f'制图出错:{e}', False)
-#                 msg += F'UID{player.uid}制图时出错：{e}\n'
-#
-#     await role_combat.finish(msg)
+
+role_combat = on_command(
+    'hxzjjs',
+    aliases={'幻想真境剧诗', 'hxzjjs', '剧诗', 'js'},
+    priority=10,
+    block=True,
+    state={
+        'pm_name': 'hxzjjs',
+        'pm_description': '查看本期幻想真境剧诗战报',
+        'pm_usage': 'hxzjjs(uid)',
+        'pm_priority': 1,
+    }
+)
+
+@role_combat.handle()
+async def _(event: MessageEvent, players=CommandPlayer(), msg: Message = CommandArg()):
+    logger.info('原神幻想真境剧诗战报', '开始执行')
+    text = msg.extract_plain_text()  # 先提取文本
+    role_combat_index = 1 if '上期' in text else 0
+    msg = Message()
+    for player in players:
+        logger.info('原神幻想真境剧诗战报', '➤ ', {'用户': players[0].user_id, 'UID': players[0].uid})
+        gim = GenshinInfoManager(player.user_id, player.uid)
+        role_combat_info = await gim.get_role_combat_info(role_combat_index )
+        if isinstance(role_combat_info, str):
+            logger.info('原神幻想真境剧诗', '➤➤', {}, role_combat_info, False)
+            msg += f'UID{player.uid} {role_combat_info}\n'
+        else:
+            logger.info('原神幻想真境剧诗战报', '➤➤', {}, '数据获取成功', True)
+            try:
+                img = await draw_role_combat_card(role_combat_info)
+                logger.info('原神幻想真境剧诗战报', '➤➤➤', {}, '制图完成', True)
+                msg += img
+            except Exception as e:
+                logger.info('原神幻想真境剧诗战报', '➤➤➤', {}, f'制图出错:{e}', False)
+                msg += F'UID{player.uid}制图时出错：{e}\n'
+
+    await role_combat.finish(msg)
 
 
 @hard_challenge.handle()

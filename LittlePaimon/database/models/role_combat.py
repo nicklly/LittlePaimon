@@ -96,7 +96,6 @@ class RoleCombat_Infos(BaseModel):
     def pop(self, index=-1):
         self.Battleinfos.pop(index)
 
-
 class FloorInfo(BaseModel):
     index: int
     """楼层数"""
@@ -132,6 +131,86 @@ class Floors(BaseModel):
     def get(self, index, default=None):
         return self.floors.get(index, default)
 
+class Concert_info(BaseModel):
+    difficulty_id: Optional[int] = None
+    """挑战难度"""
+    max_round_id: Optional[int] = None
+    """最高幕数"""
+    medal_round_list: Optional[List] = None
+    """明星挑战星章"""
+    coin_num: Optional[int] = None
+    """消耗幻剧之花"""
+    avatar_bonus_num: Optional[int] = None
+    """场外声援"""
+    tarot_finished_cnt: Optional[int] = None
+    """助演支援"""
+    total_use_time: Optional[int] = None
+    """演出时长"""
+
+class Concert_infos(BaseModel):
+    Concert_infos: List[Concert_info] = []
+    """角色列表"""
+
+    def __len__(self):
+        return len(self.Concert_infos)
+
+    def __getitem__(self, item):
+        return self.Concert_infos[item]
+
+    def __setitem__(self, key, value):
+        self.Concert_infos[key] = value
+
+    def __delitem__(self, key):
+        del self.Concert_infos[key]
+
+    def __iter__(self) -> Iterator[Concert_info]:
+        return iter(self.Concert_infos)
+
+    def __reversed__(self):
+        return reversed(self.Concert_infos)
+
+    def append(self, character: Concert_info):
+        self.Concert_infos.append(character)
+
+    def pop(self, index=-1):
+        self.Concert_infos.pop(index)
+
+class RoleCombat_Character(BaseModel):
+    avatar_id: Optional[int]
+    """角色ID"""
+    value: Optional[int]
+    """伤害数值"""
+    rarity: Optional[int]
+    """角色稀有度"""
+
+class Charas(BaseModel):
+    Characters: List[RoleCombat_Character] = []
+    """角色列表"""
+
+    def __len__(self):
+        return len(self.Characters)
+
+    def __getitem__(self, item):
+        return self.Characters[item]
+
+    def __setitem__(self, key, value):
+        self.Characters[key] = value
+
+    def __delitem__(self, key):
+        del self.Characters[key]
+
+    def __iter__(self) -> Iterator[RoleCombat_Character]:
+        return iter(self.Characters)
+
+    def __reversed__(self):
+        return reversed(self.Characters)
+
+    def append(self, character: RoleCombat_Character):
+        self.Characters.append(character)
+
+    def pop(self, index=-1):
+        self.Characters.pop(index)
+
 class Role_Combat_Info(Model):
     id = fields.IntField(pk=True, generated=True, auto_increment=True)
     user_id: str = fields.CharField(max_length=255)  # type: ignore
@@ -140,6 +219,18 @@ class Role_Combat_Info(Model):
     """原神uid"""
     teams: Floors = fields.JSONField(encoder=Floors.json, decoder=Floors.parse_raw, default=Floors()) # type: ignore
     """出战阵容"""
+    stat: Concert_info = fields.JSONField(encoder=Concert_info.json, decoder=Concert_info.parse_raw, null=True) # type: ignore
+    """数据简报"""
+    max_defeat_avatar: RoleCombat_Character = fields.JSONField(encoder=RoleCombat_Character.json, decoder=RoleCombat_Character.parse_raw, null=True)# type: ignore
+    """最高伤害输出"""
+    max_damage_avatar: RoleCombat_Character = fields.JSONField(encoder=RoleCombat_Character.json, decoder=RoleCombat_Character.parse_raw, null=True)# type: ignore
+    """击败最多"""
+    max_take_damage_avatar: RoleCombat_Character = fields.JSONField(encoder=RoleCombat_Character.json, decoder=RoleCombat_Character.parse_raw, null=True)# type: ignore
+    """最高承伤"""
+    total_coin_consumed: RoleCombat_Character = fields.JSONField(encoder=RoleCombat_Character.json, decoder=RoleCombat_Character.parse_raw, null=True)# type: ignore
+    """本次消耗最多"""
+    shortest: Charas = fields.JSONField(encoder=Charas.json, decoder=Charas.parse_raw, null=True)# type: ignore
+    """最快完成队伍"""
 
     class Meta:
         table = "Role_Combat_Info"
@@ -149,6 +240,55 @@ class Role_Combat_Info(Model):
         await cls.filter(user_id=user_id, uid=uid).delete()
         info, _ = await cls.get_or_create(user_id=user_id, uid=uid)
         rounds_data = data['data'][abyss_index]['detail']['rounds_data']
+        stat_data = data['data'][abyss_index]['stat']
+        flight_data = data['data'][abyss_index]['detail']['fight_statisic']
+        shortest_data  = flight_data['shortest_avatar_list']
+
+        info.use_time = Concert_info(
+        )
+        if flight_data['max_defeat_avatar'] is not None:
+           info.max_defeat_avatar = RoleCombat_Character(
+                avatar_id = flight_data['max_defeat_avatar']['avatar_id'],
+                value = flight_data['max_defeat_avatar']['value'],
+                rarity = flight_data['max_defeat_avatar']['rarity']
+            )
+        if flight_data['max_damage_avatar'] is not None:
+            info.max_damage_avatar = RoleCombat_Character(
+                avatar_id = flight_data['max_damage_avatar']['avatar_id'],
+                value = flight_data['max_damage_avatar']['value'],
+                rarity = flight_data['max_damage_avatar']['rarity']
+            )
+        if flight_data['max_take_damage_avatar'] is not None:
+            info.max_take_damage_avatar = RoleCombat_Character(
+                avatar_id = flight_data['max_take_damage_avatar'] ['avatar_id'],
+                value = flight_data['max_take_damage_avatar'] ['value'],
+                rarity = flight_data['max_take_damage_avatar'] ['rarity']
+            )
+        if flight_data['total_coin_consumed'] is not None:
+            info.total_coin_consumed = RoleCombat_Character(
+                value = flight_data['total_coin_consumed']['value']
+            )
+        if flight_data['shortest_avatar_list']:
+            team_members = []
+            for i in range(len(shortest_data)):
+                team_members.append(
+                    RoleCombat_Character(
+                        avatar_id = shortest_data[i]['avatar_id'],
+                        value = 0,
+                        rarity = shortest_data[i]['rarity']
+                    )
+                )
+            info.shortest = Charas(Characters=team_members)
+
+        info.stat =  Concert_info(
+                    difficulty_id = stat_data['difficulty_id'],
+                    max_round_id = stat_data['max_round_id'],
+                    medal_round_list = stat_data['get_medal_round_list'],
+                    coin_num = stat_data['coin_num'],
+                    avatar_bonus_num = stat_data['avatar_bonus_num'],
+                    tarot_finished_cnt = stat_data['tarot_finished_cnt'],
+                    total_use_time = flight_data['total_use_time']
+                )
 
         for floors in range(len(rounds_data)):
             floor_info = FloorInfo(index=floors)

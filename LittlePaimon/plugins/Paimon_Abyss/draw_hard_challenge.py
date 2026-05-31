@@ -1,5 +1,7 @@
 from typing import  List
 
+from shapely.geometry import mapping
+
 from LittlePaimon.database import Hard_Challenge_Info, Abyss2Info
 from LittlePaimon.utils.alias import get_chara_icon, get_name_by_id
 from LittlePaimon.utils.image import PMImage
@@ -7,6 +9,12 @@ from LittlePaimon.utils.image import font_manager as fm
 from LittlePaimon.utils.image import load_image
 from LittlePaimon.utils.message import MessageBuild
 from LittlePaimon.utils.path import RESOURCE_BASE_PATH
+
+mapping = {
+    1: "一",
+    2: "二",
+    3: "三",
+}
 
 async def group_by_floor(info: Hard_Challenge_Info) -> List[dict]:
     """将角色数据按Boss分组"""
@@ -104,11 +112,12 @@ async def draw_single_floor(bg: PMImage, floor_info: dict, floor_idx: int, y_off
     floor_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / 'frame.png'))
     await floor_bg.resize((1040, 450))
     # Boss名称
-    boss_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / 'orange_card.png'))
+    boss_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / 'line.png'))
     await boss_bg.resize((900, 50))
     await bg.paste(boss_bg, (90, y_offset + 65))
     # 战斗用时
-    await bg.text(floor_info['boss'], 105, y_offset + 70,  fm.get('SourceHanSansCN-Bold.otf', 40), align='center')
+    await bg.text(f'第{mapping[floor_idx + 1]}间', 105, y_offset + 70,  fm.get('SourceHanSansCN-Bold.otf', 40), align='center')
+    await bg.text(floor_info['boss'], 290, y_offset + 70,  fm.get('SourceHanSansCN-Bold.otf', 40), align='center')
     await bg.text("战斗用时", 180 - time_bg_width // 2, y_offset + 140, fm.get('SourceHanSansCN-Bold.otf', 35), '#252525')
     await bg.text(f"{floor_info['battle_time']}秒", 680 - time_bg_width // 2, y_offset + 140, fm.get('SourceHanSansCN-Bold.otf', 35), '#252525')
     await bg.paste(floor_bg, (20, y_offset))
