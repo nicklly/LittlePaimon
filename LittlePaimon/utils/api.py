@@ -44,7 +44,7 @@ DAILY_NOTE_API = (
 GAME_RECORD_API = (
     'https://api-takumi-record.mihoyo.com/game_record/card/wapi/getGameRecordCard'
 )
-SIGN_INFO_API = 'https://api-takumi.mihoyo.com/event/luna/info'
+SIGN_INFO_API = 'https://api-takumi.mihoyo.com/event/luna/hk4e/info'
 SIGN_REWARD_API = 'https://api-takumi.mihoyo.com/event/luna/home'
 SIGN_ACTION_API = 'https://api-takumi.mihoyo.com/event/luna/sign'
 
@@ -159,14 +159,15 @@ def mihoyo_sign_headers(cookie: str, extra_headers: Optional[dict] = None) -> di
         'User_Agent': 'Mozilla/5.0 (Linux; Android 12; Unspecified Device) AppleWebKit/537.36 (KHTML, like Gecko) '
                       'Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36 miHoYoBBS/2.60.1',
         'Cookie': cookie,
-        'x-rpc-device_id': random_hex(32),
-        'Origin': 'https://act.mihoyo.com',
-        'X_Requested_With': 'com.mihoyo.hyperion',
-        'DS': get_old_version_ds(mhy_bbs=True),
-        'x-rpc-client_type': '5',
-        'Referer': 'https://act.mihoyo.com',
+        'x-rpc-device_name': 'Vivo V2309A',
+        'x-rpc-device_model': 'V2309A',
+        'x-rpc-device_id': '129ec7b8-f825-3c0b-8a2f-94c0d977ad8a',
+        'x-rpc-device_fp': '38d8191ad9596',
+        'DS': get_ds(mhy_bbs=True),
+        'x-rpc-client_type': '2',
+        'Referer': 'https://app.mihoyo.com',
         "x-rpc-signgame":"hk4e",
-        'x-rpc-app_version': '2.60.1',
+        'x-rpc-app_version': '2.108.1',
     }
     if extra_headers:
         header.update(extra_headers)
@@ -471,15 +472,14 @@ async def get_mihoyo_private_data(
         data = await aiorequests.get(
             url=SIGN_INFO_API,
             headers={
-                'x-rpc-app_version': '2.60.1',
-                'x-rpc-client_type': '5',
+                'x-rpc-signgame': 'hk4e',
+                'x-Requested-With': 'com.mihoyo.hyperion',
                 'Origin': 'https://act.mihoyo.com',
                 'Referer': 'https://act.mihoyo.com/',
                 'Cookie': cookie_info.cookie,
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS '
-                              'X) AppleWebKit/605.1.15 (KHTML, like Gecko) miHoYoBBS/2.60.1',
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 12; V2309A Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/110.0.5481.154 Safari/537.36 miHoYoBBS/2.108.0',
             },
-            params={'act_id': 'e202009291139501', 'region': server_id, 'uid': uid},
+            params={'lang': 'zh-cn', 'act_id': 'e202311201442471', 'region': server_id, 'uid': uid},
         )
     elif mode == 'sign_action':
         data = await aiorequests.post(

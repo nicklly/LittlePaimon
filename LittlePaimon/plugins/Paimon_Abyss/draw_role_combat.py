@@ -77,59 +77,68 @@ async def draw_role_combat_card(info: Role_Combat_Info):
     await bg.stretch((600, bg.height - 250), 50, 'height')
 
     shortest_data = info.shortest
-    if info.max_defeat_avatar and info.max_damage_avatar and info.max_take_damage_avatar and info.total_coin_consumed and shortest_data is not None:
+    if all([
+        info.max_defeat_avatar,
+        info.max_damage_avatar,
+        info.max_take_damage_avatar,
+        info.total_coin_consumed,
+        shortest_data is not None
+    ]):
         await bg.draw_line((40, 515), (1030, 515), color='orange')
         await bg.text('演出总时长', 40, 550, fm.get('SourceHanSansCN-Bold.otf', 40), '#40342d')
         minutes, secs = divmod(info.stat.total_use_time, 60)
         await bg.text(f"{minutes}分{secs}秒", 450, 550, fm.get('SourceHanSansCN-Bold.otf', 40), '#40342d')
 
-        if info.max_damage_avatar:
+        stat = [
+            {
+                'chara_id': info.max_damage_avatar.avatar_id,
+                'label'   : '最高伤害输出',
+                'label_y' : 580,
+                'value'   : str(info.max_damage_avatar.value),
+                'value_y' : 620,
+                'avatar_y': 580
+            },
+            {
+                'chara_id': info.max_defeat_avatar.avatar_id,
+                'label'   : '击败最多敌人',
+                'label_y' : 680,
+                'value'   : str(info.max_defeat_avatar.value),
+                'value_y' : 720,
+                'avatar_y': 680
+            },
+            {
+                'chara_id': info.max_take_damage_avatar.avatar_id,
+                'label'   : '最高承受伤害',
+                'label_y' : 780,
+                'value'   : str(info.max_take_damage_avatar.value),
+                'value_y' : 820,
+                'avatar_y': 780
+            },
+        ]
+        for stats in stat:
             bg1 = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / f"orange_circle.png"))
             await bg1.resize((80, 80))
-            await bg.text('最高伤害输出', 860, 580, fm.get('SourceHanSansCN-Bold.otf', 30), '#40342d')
-            await bg.text(f'{info.max_damage_avatar.value}', 860, 620, fm.get('SourceHanSansCN-Bold.otf', 30), '#40342d')
-            side_avatar = PMImage(await load_image(RESOURCE_BASE_PATH / 'avatar' / f'{get_chara_icon(chara_id=info.max_damage_avatar.avatar_id)}.png'), mode='RGBA')
-            await side_avatar.resize((75, 75))
+            await bg.text(f'{stats["label"]}', 860, stats["label_y"], fm.get('SourceHanSansCN-Bold.otf', 30), '#40342d')
+            await bg.text(f'{stats["value"]}', 860, stats["value_y"], fm.get('SourceHanSansCN-Bold.otf', 30), '#40342d')
+            side_avatar = PMImage(await load_image(RESOURCE_BASE_PATH / 'avatar_side' / f'{get_chara_icon(chara_id=stats["chara_id"], icon_type="side")}.png'), mode='RGBA')
+            await side_avatar.resize((80, 80))
             await side_avatar.to_circle('circle')
-            await bg1.paste(side_avatar, (2, 5))
-            await bg.paste(bg1, (750, 580))
+            await bg1.paste(side_avatar, (0, 0))
+            await bg.paste(bg1, (750, stats["avatar_y"]))
 
-        if info.max_defeat_avatar:
-            bg2 = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / f"orange_circle.png"))
-            await bg2.resize((80, 80))
-            await bg.text('击败最多敌人', 860, 680, fm.get('SourceHanSansCN-Bold.otf', 30), '#40342d')
-            await bg.text(f'{info.max_defeat_avatar.value}', 860, 720, fm.get('SourceHanSansCN-Bold.otf', 30), '#40342d')
-            side_avatar_1 = PMImage(await load_image(RESOURCE_BASE_PATH / 'avatar' / f'{get_chara_icon(chara_id=info.max_defeat_avatar.avatar_id,)}.png'), mode='RGBA')
-            await side_avatar_1.resize((75, 75))
-            await side_avatar_1.to_circle('circle')
-            await bg2.paste(side_avatar_1, (2, 5))
-            await bg.paste(bg2, (750, 680))
-
-        if info.max_take_damage_avatar:
-            bg3 = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / f"orange_circle.png"))
-            await bg3.resize((80, 80))
-            await bg.text('最高承受伤害', 860, 780, fm.get('SourceHanSansCN-Bold.otf', 30), '#40342d')
-            await bg.text(f'{info.max_take_damage_avatar.value}', 860, 820, fm.get('SourceHanSansCN-Bold.otf', 30), '#40342d')
-            side_avatar_2 = PMImage(await load_image(RESOURCE_BASE_PATH / 'avatar' / f'{get_chara_icon(chara_id=info.max_take_damage_avatar.avatar_id)}.png'), mode='RGBA')
-            await side_avatar_2.resize((75, 75))
-            await side_avatar_2.to_circle('circle')
-            await bg3.paste(side_avatar_2, (2, 5))
-            await bg.paste(bg3, (750, 780))
-
-        if shortest_data:
-            start_y = 725
-            avatar_width = 140
-            spacing = 10
-            await bg.text('最快完成演出队伍', 40, 650, fm.get('SourceHanSansCN-Bold.otf', 40), '#40342d')
-            for i, chara in enumerate(shortest_data):
-                current_x = spacing + i * (avatar_width + spacing)
-                avatar_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / f"orange_circle.png"))
-                avatar = PMImage(await load_image(RESOURCE_BASE_PATH / 'avatar' / f'{get_chara_icon(chara_id=chara.avatar_id)}.png'), mode='RGBA')
-                await avatar.resize((128, 128))
-                await avatar.to_circle('circle')
-                await avatar_bg.resize((135, 135))
-                await avatar_bg.paste(avatar,(3, 5))
-                await bg.paste(avatar_bg, (current_x + 20, start_y))
+        start_y = 725
+        avatar_width = 140
+        spacing = 10
+        await bg.text('最快完成演出队伍', 40, 650, fm.get('SourceHanSansCN-Bold.otf', 40), '#40342d')
+        for i, chara in enumerate(shortest_data):
+            current_x = spacing + i * (avatar_width + spacing)
+            avatar_bg = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / f"orange_circle.png"))
+            avatar = PMImage(await load_image(RESOURCE_BASE_PATH / 'avatar' / f'{get_chara_icon(chara_id=chara.avatar_id)}.png'), mode='RGBA')
+            await avatar.resize((128, 128))
+            await avatar.to_circle('circle')
+            await avatar_bg.resize((135, 135))
+            await avatar_bg.paste(avatar,(3, 3))
+            await bg.paste(avatar_bg, (current_x + 20, start_y))
     else:
         no_data = PMImage(await load_image(RESOURCE_BASE_PATH / 'general' / f"orange_bord.png"))
         await no_data.stretch((100, 200), 760, 'width')
@@ -137,5 +146,4 @@ async def draw_role_combat_card(info: Role_Combat_Info):
         await no_data.text('暂无挑战数据', 280, 125, fm.get('SourceHanSansCN-Bold.otf', 60), '#40342d')
         await bg.paste(no_data, (40, 520))
 
-        # await bg.draw_rectangle((40, 540, 1030, 850), color='white', width='100%')
     return MessageBuild.Image(bg)

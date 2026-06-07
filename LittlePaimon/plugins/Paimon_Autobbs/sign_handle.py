@@ -14,14 +14,17 @@ from LittlePaimon.utils.api import get_mihoyo_private_data, get_sign_reward_list
 from LittlePaimon.utils.requests import aiorequests
 from .draw import SignResult, draw_result
 
-SIGN_ACTION_API = 'https://api-takumi.mihoyo.com/event/bbs_sign_reward/sign'
-GEETEST_HEADER = {"Accept":           "*/*",
-                  "X-Requested-With": "com.mihoyo.hyperion",
-                  "User-Agent":       'Mozilla/5.0 (Linux; Android 12; Unspecified Device) AppleWebKit/537.36 (KHTML, like Gecko) '
-                                      'Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36 miHoYoBBS/2.35.2',
-                  "Referer":          "https://webstatic.mihoyo.com/",
-                  "Accept-Language":  "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"
-                  }
+SIGN_ACTION_API = 'https://bbs-api.miyoushe.com/apihub/app/api/signIn'
+# GEETEST_HEADER = {
+#     "DS": get_ds(mhy_bbs_sign=True),
+#     "cookie":
+#     "Accept":           "*/*",
+#     "X-Requested-With": "com.mihoyo.hyperion",
+#     "User-Agent":       'Mozilla/5.0 (Linux; Android 12; Unspecified Device) AppleWebKit/537.36 (KHTML, like Gecko) '
+#                                       'Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36 miHoYoBBS/2.35.2',
+#     "Referer":          "https://webstatic.mihoyo.com/",
+#     "Accept-Language":  "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"
+# }
 sign_reward_list: dict = {}
 
 
@@ -30,9 +33,7 @@ async def sign_action(user_id: str, uid: str) -> Union[dict, str]:
     cookie_info = await PrivateCookie.get_or_none(user_id=user_id, uid=uid)
     resp = await aiorequests.post(SIGN_ACTION_API, headers=mihoyo_sign_headers(cookie_info.cookie),
                                   json={
-                                      'act_id': 'e202009291139501',
-                                      'uid':    uid,
-                                      'region': server_id
+                                      'gids': '2',
                                   })
     data = resp.json()
     if await check_retcode(data, cookie_info, user_id, uid):

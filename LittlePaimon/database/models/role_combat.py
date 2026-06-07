@@ -260,9 +260,9 @@ class Role_Combat_Info(Model):
             )
         if flight_data['max_take_damage_avatar'] is not None:
             info.max_take_damage_avatar = RoleCombat_Character(
-                avatar_id = flight_data['max_take_damage_avatar'] ['avatar_id'],
-                value = flight_data['max_take_damage_avatar'] ['value'],
-                rarity = flight_data['max_take_damage_avatar'] ['rarity']
+                avatar_id = flight_data['max_take_damage_avatar']['avatar_id'],
+                value = flight_data['max_take_damage_avatar']['value'],
+                rarity = flight_data['max_take_damage_avatar']['rarity']
             )
         if flight_data['total_coin_consumed'] is not None:
             info.total_coin_consumed = RoleCombat_Character(
