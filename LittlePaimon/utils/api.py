@@ -52,6 +52,9 @@ AUTHKEY_API = 'https://api-takumi.mihoyo.com/binding/api/genAuthKey'
 STOKEN_API = 'https://api-takumi.mihoyo.com/auth/api/getMultiTokenByLoginTicket'
 COOKIE_TOKEN_API = 'https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken'
 
+SCAN_STATUS_API = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/scanQRLogin'
+CONFIRM_STATUS_API = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/confirmQRLogin'
+
 LOGIN_TICKET_INFO_API = (
     'https://webapi.account.mihoyo.com/Api/cookie_accountinfo_by_loginticket'
 )
@@ -68,7 +71,6 @@ def md5(text: str) -> str:
     md5_.update(text.encode())
     return md5_.hexdigest()
 
-
 def random_hex(length: int) -> str:
     """
     生成指定长度的随机字符串
@@ -81,7 +83,6 @@ def random_hex(length: int) -> str:
         result = '0' * (length - len(result)) + result
     return result
 
-
 def random_text(length: int) -> str:
     """
     生成指定长度的随机字符串
@@ -91,40 +92,121 @@ def random_text(length: int) -> str:
     """
     return ''.join(random.sample(string.ascii_lowercase + string.digits, length))
 
-
-def get_ds(q: str = '', b: dict = None, mhy_bbs_sign: bool = False) -> str:
+def get_ds(q: str = '', b: dict = None) -> str:
     """
     生成米游社headers的ds_token
 
     :param q: 查询
     :param b: 请求体
-    :param mhy_bbs_sign: 是否为米游社讨论区签到
+    :return: ds_token
+    """
+    chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+    br = json.dumps(b) if b else ''
+    t = str(int(time.time()))
+    r = ''.join(random.choices(chars, k=6))
+    c = md5(f'salt=dDIQHbKOdaPaLuvQKVzUzqdeCaxjtaPV&t={t}&r={r}&b={br}&q={q}')
+    return f'{t},{r},{c}'
+
+def get_ds_x4(q: str = '', b: dict = None) -> str:
+    """
+    生成米游社headers的ds_token
+
+    :param q: 查询
+    :param b: 请求体
     :return: ds_token
     """
     br = json.dumps(b) if b else ''
-    if mhy_bbs_sign:
-        s = 't0qEgfub6cvueAPgR5m9aQWWVciEer7v'
-    else:
-        s = 'xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs'
+
     t = str(int(time.time()))
     r = str(random.randint(100000, 200000))
-    c = md5(f'salt={s}&t={t}&r={r}&b={br}&q={q}')
+    c = md5(f'salt=xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs&t={t}&r={r}&b={br}&q={q}')
     return f'{t},{r},{c}'
 
+def get_ds_x6(q: str = '', b: str = None) -> str:
+    """
+    生成米游社headers的ds_token
 
-def get_old_version_ds(mhy_bbs: bool = False) -> str:
+    :param q: 查询
+    :param b: 请求体
+    :return: ds_token
+    """
+    br = json.dumps(b) if b else ''
+    t = str(int(time.time()))
+    r = str(random.randint(100001, 200000))
+    c = md5(f'salt=t0qEgfub6cvueAPgR5m9aQWWVciEer7v&t={t}&r={r}&b={br}&q={q}')
+    return f'{t},{r},{c}'
+
+def get_old_version_ds(web: bool = False) -> str:
     """
     生成米游社旧版本headers的ds_token
     """
-    if mhy_bbs:
-        s = '1OJyMNCqFlstEQqqMOv0rKCIdTOoJhNt'
+    if web:
+        s = 'G1ktdwFL4IyGkHuuWSmz0wUe9Db9scyK'
     else:
-        s = 'AcpNVhfh0oedCobdCyFV8EE1jMOVDy9q'
+        s = 'idMMaGYmVgPzh3wxmWudUXKUPGidO7GM'
     t = str(int(time.time()))
     r = ''.join(random.sample(string.ascii_lowercase + string.digits, 6))
     c = md5(f"salt={s}&t={t}&r={r}")
     return f"{t},{r},{c}"
 
+def qrcode_permission_headers(cookies: str):
+    return {
+        'DS':                   get_old_version_ds(web=False),
+        'cookie':               cookies,
+        'x-rpc-client_type':    '2',
+        'x-rpc-app_version':    '2.99.1',
+        'x-rpc-sys_version':    '12',
+        'x-rpc-channel':        'miyousheluodi',
+        'x-rpc-device_id':      'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
+        'x-rpc-device_name':    'OPPO Find X7',
+        'x-rpc-device_model':   'PHZ110',
+        'x-rpc-h265_supported': '1',
+        'referer':              'https://app.mihoyo.com',
+        'x-rpc-csm_source':     'discussion',
+        'content-type':         'application/json; charset=UTF-8',
+        'Host':                 'bbs-api.miyoushe.com',
+        'Connection':           'keep-alive',
+        'Accept-Encoding':      'gzip',
+        'x-rpc-verify_key':     'bll8iq97cem8',
+        'user-agent':           'okhttp/4.9.3'
+    }
+
+def login_permission_headers(ticket: Optional[dict] = None, auth_cookie: Optional[str] = '', referer: Optional[str] = '') -> dict:
+    return {
+        "Accept-Language":          "zh-cn",
+        "Content-Type":             "application/json; charset=UTF-8",
+        "Accept":                   "*/*",
+        "Cookie":                   auth_cookie,
+        "DS":                       get_ds('', ticket),
+        "referer":                  referer if referer is not None else '',
+        "x-rpc-app_version":        "2.90.1",
+        "x-rpc-app_id":             "bll8iq97cem8",
+        "x-rpc-sdk_version":        '2.90.1',
+        "x-rpc-client_type":        '2',
+        "x-rpc-device_fp":          '38d81926460a0',
+        "x-rpc-device_id":          'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
+        "x-rpc-device_model":       "PHZ110",
+        "x-rpc-game_biz":           "bbs_cn",
+        "x-rpc-account_version":    "2.90.1",
+        "x-rpc-device_name":        "Mihoyo Capture",
+        "User-Agent":               "Mozilla/5.0 miHoYoBBS/2.90.1 Capture/2.2.0"
+    }
+
+async def check_qrcode_status(url: str, ticket: str, auth_cookie:str, referer: str = '') -> bool:
+    token_types = ["4"]
+    tickets = {'ticket': ticket, 'token_types': token_types}
+    body = json.dumps(tickets, ensure_ascii=False)
+
+    req = await aiorequests.post(
+        url = url,
+        headers = login_permission_headers(tickets, auth_cookie, referer),
+        data = body
+    )
+    try:
+        result = req.json()
+        return result["retcode"] == 0
+    except Exception as e:
+        return False
 
 def mihoyo_headers(cookie, q='', b=None) -> dict:
     """
@@ -135,39 +217,48 @@ def mihoyo_headers(cookie, q='', b=None) -> dict:
         :return: headers
     """
     return {
-        'DS': get_ds(q, b),
-        'x-rpc-device_fp': '38d7f236aea34',
-        'x-rpc-device_id': random_hex(32),
-        'Origin': 'https://webstatic.mihoyo.com',
-        'Cookie': cookie,
-        'x-rpc-app_version': "2.60.1",
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS '
-                      'X) AppleWebKit/605.1.15 (KHTML, like Gecko) miHoYoBBS/2.60.1',
-        'x-rpc-client_type': '5',
-        'Referer': 'https://webstatic.mihoyo.com/',
+        'Origin':               'https://webstatic.mihoyo.com',
+        'X-Requested-With':     'com.mihoyo.hyperion',
+        'x-rpc-page':           'v6.6.1-gr-cn_#/ys',
+        'x-rpc-app_version':    '2.90.1',
+        'x-rpc-device_fp':      '38d81926460a0',
+        'x-rpc-device_name':    'OPPO Find X7',
+        'x-rpc-device_id':      'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
+        'x-rpc-tool_verison':   'v6.6.1-gr-cn',
+        'x-rpc-client_type':    '5',
+        'User-Agent':           'Mozilla/5.0 (Linux; Android 12; V2309A Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/110.0.5481.154 Safari/537.36 miHoYoBBS/2.108.0',
+        'Referer':              'https://webstatic.mihoyo.com/',
+        'Cookie':               cookie,
+        'DS':                   get_ds_x4(q, b),
     }
 
 
 def mihoyo_sign_headers(cookie: str, extra_headers: Optional[dict] = None) -> dict:
     """
     生成米游社签到headers
+        :param mhy_bbs:
+        :param q:
+        :param b:
         :param cookie: cookie
         :param extra_headers: 额外的headers参数
         :return: headers
     """
     header = {
-        'User_Agent': 'Mozilla/5.0 (Linux; Android 12; Unspecified Device) AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36 miHoYoBBS/2.60.1',
-        'Cookie': cookie,
-        'x-rpc-device_name': 'Vivo V2309A',
-        'x-rpc-device_model': 'V2309A',
-        'x-rpc-device_id': '129ec7b8-f825-3c0b-8a2f-94c0d977ad8a',
-        'x-rpc-device_fp': '38d8191ad9596',
-        'DS': get_ds(mhy_bbs=True),
-        'x-rpc-client_type': '2',
-        'Referer': 'https://app.mihoyo.com',
-        "x-rpc-signgame":"hk4e",
-        'x-rpc-app_version': '2.108.1',
+        'User-Agent':           'okhttp/4.9.3',
+        'x-rpc-device_name':    'Vivo V2309A',
+        'x-rpc-device_model':   'V2309A',
+        'x-rpc-device_id':      '129ec7b8-f825-3c0b-8a2f-94c0d977ad8a',
+        'x-rpc-device_fp':      '38d8191ad9596',
+        'x-rpc-client_type':    '2',
+        'x-rpc-channel':        'miyousheluodi',
+        'x-rpc-csm_source':     'discussion',
+        'x-rpc-app_version':    '2.90.1',
+        'x-rpc-sys_version':    '12',
+        'Referer':              'https://app.mihoyo.com',
+        'Host':                 'bbs-api.miyoushe.com',
+        "Content-Type":         "application/json; charset=UTF-8",
+        'Cookie':               cookie,
+        'DS':                   get_old_version_ds(mhy_bbs=False),
     }
     if extra_headers:
         header.update(extra_headers)
@@ -472,12 +563,12 @@ async def get_mihoyo_private_data(
         data = await aiorequests.get(
             url=SIGN_INFO_API,
             headers={
-                'x-rpc-signgame': 'hk4e',
+                'x-rpc-signgame':   'hk4e',
                 'x-Requested-With': 'com.mihoyo.hyperion',
-                'Origin': 'https://act.mihoyo.com',
-                'Referer': 'https://act.mihoyo.com/',
-                'Cookie': cookie_info.cookie,
-                'User-Agent': 'Mozilla/5.0 (Linux; Android 12; V2309A Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/110.0.5481.154 Safari/537.36 miHoYoBBS/2.108.0',
+                'Origin':           'https://act.mihoyo.com',
+                'Referer':          'https://act.mihoyo.com/',
+                'Cookie':           cookie_info.cookie,
+                'User-Agent':       'Mozilla/5.0 (Linux; Android 12; V2309A Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/110.0.5481.154 Safari/537.36 miHoYoBBS/2.108.0',
             },
             params={'lang': 'zh-cn', 'act_id': 'e202311201442471', 'region': server_id, 'uid': uid},
         )
@@ -499,7 +590,7 @@ async def get_mihoyo_private_data(
 
 async def get_sign_reward_list() -> dict:
     headers = {
-        'x-rpc-app_version': '2.60.1',
+        'x-rpc-app_version': '2.99.1',
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 ('
                       'KHTML, like Gecko) miHoYoBBS/2.60.1',
         "x-rpc-signgame":"hk4e",
@@ -518,7 +609,7 @@ async def get_stoken_by_login_ticket(login_ticket: str, mys_id: str) -> Optional
         data = await aiorequests.get(
             STOKEN_API,
             headers={
-                'x-rpc-app_version': '2.11.2',
+                'x-rpc-app_version': '2.99.1',
                 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) miHoYoBBS/2.60.1',
                 'x-rpc-client_type': '5',
                 'Referer': 'https://webstatic.mihoyo.com/',
@@ -536,7 +627,7 @@ async def get_cookie_token_by_stoken(stoken: str, mys_id: str) -> Optional[str]:
         data = await aiorequests.get(
             COOKIE_TOKEN_API,
             headers={
-                'x-rpc-app_version': '2.11.2',
+                'x-rpc-app_version': '2.99.1',
                 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) miHoYoBBS/2.60.1',
                 'x-rpc-client_type': '5',
                 'Referer': 'https://webstatic.mihoyo.com/',
@@ -571,11 +662,12 @@ async def get_authkey_by_stoken(
         )
     if not cookie_info.stoken:
         return 'cookie中没有stoken字段，请重新绑定', False, cookie_info
+
     headers = {
         "Cookie": cookie_info.stoken,
         "DS": get_old_version_ds(True),
         "User-Agent": "okhttp/4.8.0",
-        "x-rpc-app_version": "2.60.1",
+        "x-rpc-app_version": "2.99.1",
         "x-rpc-sys_version": "12",
         "x-rpc-client_type": "5",
         "x-rpc-channel": "mihoyo",

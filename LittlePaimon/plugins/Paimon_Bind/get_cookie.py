@@ -6,10 +6,12 @@ import json
 import random
 import time
 import base64
+import re
 from hashlib import md5
 from io import BytesIO
 from string import ascii_letters
 from string import digits
+
 
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
@@ -22,12 +24,13 @@ from LittlePaimon.utils import NICKNAME
 from LittlePaimon.utils.qrcode import generate_qrcode
 from LittlePaimon.utils.requests import aiorequests
 from LittlePaimon.utils.scheduler import scheduler
-from LittlePaimon.utils.api import get_bind_game_info
+from LittlePaimon.utils.api import get_bind_game_info, login_permission_headers, check_qrcode_status, SCAN_STATUS_API, \
+    CONFIRM_STATUS_API
 from LittlePaimon.utils.message import fullmatch_rule
 
 CN_DS_SALT = 'JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS'
 CN_DS_SALT_V2 = 'OvOIsZRXrUbXoUlpQuhEx4tgAwNVUMmp'
-BBS_VERSION = '2.104.0'
+BBS_VERSION = '2.90.1'
 device_id = "".join(random.choices((ascii_letters + digits), k=64))
 
 
@@ -36,6 +39,13 @@ bind_tips_web = '绑定方法二选一：\n1.通过米游社扫码绑定：\n请
 
 running_login_data = {}
 
+
+web_headers = {
+    'User-Agent':         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36',
+    'x-rpc-app_id':       'bll8iq97cem8',
+    'x-rpc-device_id':    'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
+    'x-rpc-sdk_version':  '2.90.1'
+}
 
 def md5_(self) -> str:
     return md5(self.encode()).hexdigest()
@@ -49,14 +59,42 @@ def get_ds(salt_version=CN_DS_SALT, body=None, query=None) -> str:
     return f"{t},{r},{h}"
 
 async def create_login_data():
+
+    app_headers = {
+        # 'User-Agent':           'HYPContainer/1.3.3.182',
+        'user-agent':           'Mozilla/5.0 miHoYoBBS/2.90.1 Capture/2.2.0',
+        'x-rpc-app_id':         'ddxf5dufpuyo',
+        'x-rpc-client_type':    '3',
+        'x-rpc-device_id':      'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
+        'x-rpc-device_fp':      '38d81926460a0',
+        'x-rpc-device_name':    'Mihoyo Capture',
+        'x-rpc-device_model':   'PHZ110',
+        'x-rpc-sdk_version':    '2.90.1',
+        'x-rpc-app_version':    '2.90.1',
+        'x-rpc-game_biz':       'bbs_cn',
+        'Content-Type':         'application/json; charset=UTF-8'
+    }
+    headers = login_permission_headers()
+    headers.update(
+        {'x-rpc-client_type': '3'}
+    )
     res = await aiorequests.post(
-        'https://passport-api.mihoyo.com/account/ma-cn-passport/app/createQRLogin?',
-        headers = {
-            "User-Agent": "HYPContainer/1.3.3.182",
-            "x-rpc-app_id": "ddxf5dufpuyo",
-            "x-rpc-client_type": "3",
-            "x-rpc-device_id": device_id,
-        }
+        url = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/createQRLogin',
+        headers = headers
+    )
+    result = res.json()
+    url = result['data']['url']
+    ticket = result['data']['ticket']
+    return {
+        'ticket': ticket,
+        'url':    url
+    }
+
+async def create_extra_login_data():
+
+    res = await aiorequests.post(
+        url = 'https://passport-api.mihoyo.com/account/ma-cn-passport/web/createQRLogin',
+        headers = login_permission_headers()
     )
     result = res.json()
     url = result['data']['url']
@@ -68,19 +106,41 @@ async def create_login_data():
 
 
 async def check_login(login_data: dict):
+    app_headers = {
+        'User-Agent':         'HYPContainer/1.3.3.182',
+        'x-rpc-app_id':       'ddxf5dufpuyo',
+        'x-rpc-client_type':  '3',
+        'x-rpc-device_id':    'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
+        'x-rpc-device_fp':    '38d81926460a0',
+        'x-rpc-device_name':  'OPPO Find X7',
+        'x-rpc-device_model': 'PHZ110',
+    }
+
     res = await aiorequests.post(
-        f"https://passport-api.mihoyo.com/account/ma-cn-passport/app/queryQRLoginStatus?",
-        headers = {
-            "User-Agent": "HYPContainer/1.3.3.182",
-            "x-rpc-app_id": "ddxf5dufpuyo",
-            "x-rpc-client_type": "3",
-            "x-rpc-device_id": device_id,
-        },
+        url = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/queryQRLoginStatus',
+        headers = app_headers,
         json = {
             'ticket': login_data['ticket']
         }
     )
-    return res.json()
+    return res
+
+async def get_extra_cookie(tickets: str):
+    res = await aiorequests.post(
+        url = 'https://passport-api.mihoyo.com/account/ma-cn-passport/web/queryQRLoginStatus',
+        headers = login_permission_headers(),
+        json = {
+            'ticket': tickets
+        }
+    )
+    result = res.json()
+    for i in range(3):
+        if result['retcode'] == 0:
+            if result['data']['status'] == 'Confirmed':
+                cookies = dict(res.cookies)
+                cookies.pop('aliyungf_tc', None)
+                return '; '.join(f'{k}={v}' for k, v in cookies.items())
+    return None
 
 
 async def get_cookie_token(aigis : str = '', data: dict = None, stoken: str = ''):
@@ -94,10 +154,10 @@ async def get_cookie_token(aigis : str = '', data: dict = None, stoken: str = ''
             'Accept':             'application/json',
             'x-rpc-game_biz':     'bbs_cn',
             'x-rpc-sys_version':  '12',
-            'x-rpc-device_id':    device_id,
-            'x-rpc-device_fp':    ''.join(random.choices((ascii_letters + digits), k=13)),
-            'x-rpc-device_name':  'Chrome 108.0.0.0',
-            'x-rpc-device_model': 'Windows 10 64-bit',
+            'x-rpc-device_id':    'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
+            'x-rpc-device_fp':    '38d81926460a0',
+            'x-rpc-device_name':  'OPPO Find X7',
+            'x-rpc-device_model': 'PHZ110',
             'x-rpc-app_id':       'bll8iq97cem8',
             'x-rpc-client_type':  '2',
             'User-Agent':         'Hyperion/550 CFNetwork/3860.500.112 Darwin/25.4.0',
@@ -145,7 +205,10 @@ async def check_qrcode():
     with contextlib.suppress(RuntimeError):
         for user_id, data in running_login_data.items():
             send_msg = None
-            status_data = await check_login(data)
+
+            result = await check_login(data)
+            status_data = result.json()
+
             if status_data['retcode'] != 0:
                 send_msg = status_data['message']
                 running_login_data.pop(user_id)
@@ -153,7 +216,8 @@ async def check_qrcode():
                 game_token = status_data['data']
                 running_login_data.pop(user_id)
 
-                stoken = f"stoken={game_token['tokens'][0]['token']};stuid={game_token['user_info']['aid']};mid={game_token['user_info']['mid']}"
+                stoken = f"stoken={game_token['tokens'][0]['token']};stuid={game_token['user_info']['aid']};mid={game_token['user_info']['mid']};"
+
                 token = {
                     'uid': int(game_token['user_info']['aid']),
                     'mid': game_token['user_info']['mid'],
@@ -164,6 +228,17 @@ async def check_qrcode():
                 mys_id = cookie_token_data['data']['uid']
                 cookie_token = cookie_token_data['data']['cookie_token']
 
+                auth_cookie = f"stoken={game_token['tokens'][0]['token']};mid={game_token['user_info']['mid']};"
+                result = await create_extra_login_data()
+
+                scan_result = await check_qrcode_status(SCAN_STATUS_API, result['ticket'], auth_cookie)
+                confirm_result = await check_qrcode_status(CONFIRM_STATUS_API, result['ticket'], auth_cookie)
+
+                if None in (scan_result, confirm_result):
+                    send_msg = '请求被拒绝'
+
+                extra_cookie = await get_extra_cookie(result['ticket'])
+
                 if game_info := await get_bind_game_info(f"account_id={mys_id};cookie_token={cookie_token}", mys_id):
                     if not game_info['list']:
                         send_msg = '该账号尚未绑定任何游戏，请确认扫码的账号无误'
@@ -173,13 +248,15 @@ async def check_qrcode():
                         send_msg = '成功绑定原神账号：'
                         for info in genshin_games:
                             send_msg += f'{info["nickname"]}({info["uid"]}) '
+
                             await PrivateCookie.update_or_create(
                                 user_id = user_id,
                                 uid = info['uid'],
                                 mys_id = mys_id,
                                 defaults = {
                                     'cookie': f"account_id={mys_id};cookie_token={cookie_token}",
-                                    'stoken': stoken
+                                    'stoken': stoken,
+                                    'extra_cookie': extra_cookie
                                 }
                             )
                         send_msg = send_msg.strip()

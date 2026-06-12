@@ -2,15 +2,17 @@ import asyncio
 import datetime
 import random
 import time
+import json
+
 from collections import defaultdict
+from string import ascii_letters
 from typing import Tuple, Union
-
 from nonebot import get_bot
-
 from LittlePaimon.config import config
 from LittlePaimon.database import MihoyoBBSSub, LastQuery, PrivateCookie
 from LittlePaimon.utils import logger, scheduler, DRIVER
-from LittlePaimon.utils.api import get_mihoyo_private_data, get_sign_reward_list, mihoyo_sign_headers, check_retcode
+from LittlePaimon.utils.api import get_mihoyo_private_data, get_sign_reward_list, check_retcode, random_hex, \
+    get_old_version_ds, get_ds_x6, coin_headers
 from LittlePaimon.utils.requests import aiorequests
 from .draw import SignResult, draw_result
 
@@ -24,17 +26,20 @@ SIGN_ACTION_API = 'https://bbs-api.miyoushe.com/apihub/app/api/signIn'
 #                                       'Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36 miHoYoBBS/2.35.2',
 #     "Referer":          "https://webstatic.mihoyo.com/",
 #     "Accept-Language":  "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"
-# }
+# }ys
 sign_reward_list: dict = {}
-
 
 async def sign_action(user_id: str, uid: str) -> Union[dict, str]:
     server_id = 'cn_qd01' if uid[0] == '5' else 'cn_gf01'
     cookie_info = await PrivateCookie.get_or_none(user_id=user_id, uid=uid)
-    resp = await aiorequests.post(SIGN_ACTION_API, headers=mihoyo_sign_headers(cookie_info.cookie),
-                                  json={
-                                      'gids': '2',
-                                  })
+    body = json.dumps({"gids": "2"})
+    headers = coin_headers(cookie_info.stoken)
+    headers.update({'DS': get_ds_x6('', {"gids": "2"})})
+    resp = await aiorequests.post(
+        url = SIGN_ACTION_API,
+        headers = headers,
+        data = body
+    )
     data = resp.json()
     if await check_retcode(data, cookie_info, user_id, uid):
         return data

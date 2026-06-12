@@ -35,6 +35,8 @@ class PrivateCookie(Model):
     """cookie内容"""
     stoken: str = fields.TextField(null=True)
     """stoken内容"""
+    extra_cookie: str = fields.TextField(null=True)
+    """额外cookie内容"""
     status: int = fields.IntField(default=1)
     """cookie状态，0为疑似失效，1为可用，2为每日限制"""
 
