@@ -5,14 +5,12 @@ import time
 import json
 
 from collections import defaultdict
-from string import ascii_letters
 from typing import Tuple, Union
 from nonebot import get_bot
 from LittlePaimon.config import config
 from LittlePaimon.database import MihoyoBBSSub, LastQuery, PrivateCookie
 from LittlePaimon.utils import logger, scheduler, DRIVER
-from LittlePaimon.utils.api import get_mihoyo_private_data, get_sign_reward_list, check_retcode, random_hex, \
-    get_old_version_ds, get_ds_x6, coin_headers
+from LittlePaimon.utils.api import get_mihoyo_private_data, get_sign_reward_list, check_retcode,  get_ds_x6, qrcode_permission_headers
 from LittlePaimon.utils.requests import aiorequests
 from .draw import SignResult, draw_result
 
@@ -33,7 +31,7 @@ async def sign_action(user_id: str, uid: str) -> Union[dict, str]:
     server_id = 'cn_qd01' if uid[0] == '5' else 'cn_gf01'
     cookie_info = await PrivateCookie.get_or_none(user_id=user_id, uid=uid)
     body = json.dumps({"gids": "2"})
-    headers = coin_headers(cookie_info.stoken)
+    headers = qrcode_permission_headers(cookie_info.stoken)
     headers.update({'DS': get_ds_x6('', {"gids": "2"})})
     resp = await aiorequests.post(
         url = SIGN_ACTION_API,

@@ -39,14 +39,6 @@ bind_tips_web = '绑定方法二选一：\n1.通过米游社扫码绑定：\n请
 
 running_login_data = {}
 
-
-web_headers = {
-    'User-Agent':         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36',
-    'x-rpc-app_id':       'bll8iq97cem8',
-    'x-rpc-device_id':    'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
-    'x-rpc-sdk_version':  '2.90.1'
-}
-
 def md5_(self) -> str:
     return md5(self.encode()).hexdigest()
 
@@ -60,20 +52,6 @@ def get_ds(salt_version=CN_DS_SALT, body=None, query=None) -> str:
 
 async def create_login_data():
 
-    app_headers = {
-        # 'User-Agent':           'HYPContainer/1.3.3.182',
-        'user-agent':           'Mozilla/5.0 miHoYoBBS/2.90.1 Capture/2.2.0',
-        'x-rpc-app_id':         'ddxf5dufpuyo',
-        'x-rpc-client_type':    '3',
-        'x-rpc-device_id':      'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
-        'x-rpc-device_fp':      '38d81926460a0',
-        'x-rpc-device_name':    'Mihoyo Capture',
-        'x-rpc-device_model':   'PHZ110',
-        'x-rpc-sdk_version':    '2.90.1',
-        'x-rpc-app_version':    '2.90.1',
-        'x-rpc-game_biz':       'bbs_cn',
-        'Content-Type':         'application/json; charset=UTF-8'
-    }
     headers = login_permission_headers()
     headers.update(
         {'x-rpc-client_type': '3'}
@@ -163,7 +141,7 @@ async def get_cookie_token(aigis : str = '', data: dict = None, stoken: str = ''
             'User-Agent':         'Hyperion/550 CFNetwork/3860.500.112 Darwin/25.4.0',
             'Cookie':             stoken
         },
-        params=data
+        params = data
     )
     return res.json()
 
@@ -205,7 +183,6 @@ async def check_qrcode():
     with contextlib.suppress(RuntimeError):
         for user_id, data in running_login_data.items():
             send_msg = None
-
             result = await check_login(data)
             status_data = result.json()
 
@@ -230,7 +207,6 @@ async def check_qrcode():
 
                 auth_cookie = f"stoken={game_token['tokens'][0]['token']};mid={game_token['user_info']['mid']};"
                 result = await create_extra_login_data()
-
                 scan_result = await check_qrcode_status(SCAN_STATUS_API, result['ticket'], auth_cookie)
                 confirm_result = await check_qrcode_status(CONFIRM_STATUS_API, result['ticket'], auth_cookie)
 

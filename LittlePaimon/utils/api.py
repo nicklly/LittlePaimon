@@ -19,45 +19,26 @@ from .requests import aiorequests
 
 # MIHOYO_API = 'https://api-takumi-record.mihoyo.com/'
 # MIHOYO_API_OLD = 'https://api-takumi.mihoyo.com/'
-ABYSS_API = (
-    'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/spiralAbyss'
-)
-HARD_CHALLENGE_API = (
-    'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/hard_challenge'
-)
-ROLE_COMBAT_API = (
-    'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/role_combat'
-)
-PLAYER_CARD_API = (
-    'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/index'
-)
-CHARACTER_DETAIL_API = (
-    'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/character'
-)
-CHARACTER_SKILL_API = (
-    'https://api-takumi.mihoyo.com/event/e20200928calculate/v1/sync/avatar/detail'
-)
+ABYSS_API = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/spiralAbyss'
+HARD_CHALLENGE_API = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/hard_challenge'
+ROLE_COMBAT_API = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/role_combat'
+PLAYER_CARD_API = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/index'
+CHARACTER_DETAIL_API = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/character'
+CHARACTER_SKILL_API = 'https://api-takumi.mihoyo.com/event/e20200928calculate/v1/sync/avatar/detail'
 MONTH_INFO_API = 'https://hk4e-api.mihoyo.com/event/ys_ledger/monthInfo'
-DAILY_NOTE_API = (
-    'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/dailyNote'
-)
-GAME_RECORD_API = (
-    'https://api-takumi-record.mihoyo.com/game_record/card/wapi/getGameRecordCard'
-)
+DAILY_NOTE_API = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/dailyNote'
+GAME_RECORD_API = 'https://api-takumi-record.mihoyo.com/game_record/card/wapi/getGameRecordCard'
 SIGN_INFO_API = 'https://api-takumi.mihoyo.com/event/luna/hk4e/info'
 SIGN_REWARD_API = 'https://api-takumi.mihoyo.com/event/luna/home'
 SIGN_ACTION_API = 'https://api-takumi.mihoyo.com/event/luna/sign'
-
 AUTHKEY_API = 'https://api-takumi.mihoyo.com/binding/api/genAuthKey'
 STOKEN_API = 'https://api-takumi.mihoyo.com/auth/api/getMultiTokenByLoginTicket'
 COOKIE_TOKEN_API = 'https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken'
-
 SCAN_STATUS_API = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/scanQRLogin'
 CONFIRM_STATUS_API = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/confirmQRLogin'
+LOGIN_TICKET_INFO_API = 'https://webapi.account.mihoyo.com/Api/cookie_accountinfo_by_loginticket'
 
-LOGIN_TICKET_INFO_API = (
-    'https://webapi.account.mihoyo.com/Api/cookie_accountinfo_by_loginticket'
-)
+BBS_VERSION = '2.90.1'
 
 
 def md5(text: str) -> str:
@@ -173,28 +154,27 @@ def qrcode_permission_headers(cookies: str):
 
 def login_permission_headers(ticket: Optional[dict] = None, auth_cookie: Optional[str] = '', referer: Optional[str] = '') -> dict:
     return {
-        "Accept-Language":          "zh-cn",
-        "Content-Type":             "application/json; charset=UTF-8",
-        "Accept":                   "*/*",
-        "Cookie":                   auth_cookie,
-        "DS":                       get_ds('', ticket),
-        "referer":                  referer if referer is not None else '',
-        "x-rpc-app_version":        "2.90.1",
-        "x-rpc-app_id":             "bll8iq97cem8",
-        "x-rpc-sdk_version":        '2.90.1',
-        "x-rpc-client_type":        '2',
-        "x-rpc-device_fp":          '38d81926460a0',
-        "x-rpc-device_id":          'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
-        "x-rpc-device_model":       "PHZ110",
-        "x-rpc-game_biz":           "bbs_cn",
-        "x-rpc-account_version":    "2.90.1",
-        "x-rpc-device_name":        "Mihoyo Capture",
-        "User-Agent":               "Mozilla/5.0 miHoYoBBS/2.90.1 Capture/2.2.0"
+        'Accept-Language':          'zh-cn',
+        'Content-Type':             'application/json; charset=UTF-8',
+        'Accept':                   '*/*',
+        'Cookie':                   auth_cookie,
+        'DS':                       get_ds('', ticket),
+        'referer':                  referer if referer is not None else '',
+        'x-rpc-app_version':        f'{BBS_VERSION}',
+        'x-rpc-app_id':             'bll8iq97cem8',
+        'x-rpc-sdk_version':        f'{BBS_VERSION}',
+        'x-rpc-client_type':        '2',
+        'x-rpc-device_fp':          '38d81926460a0',
+        'x-rpc-device_id':          'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
+        'x-rpc-device_model':       'PHZ110',
+        'x-rpc-game_biz':           'bbs_cn',
+        'x-rpc-account_version':    f'{BBS_VERSION}',
+        'x-rpc-device_name':        'Mihoyo Capture',
+        'User-Agent':               f'Mozilla/5.0 miHoYoBBS/{BBS_VERSION} Capture/2.2.0'
     }
 
 async def check_qrcode_status(url: str, ticket: str, auth_cookie:str, referer: str = '') -> bool:
-    token_types = ["4"]
-    tickets = {'ticket': ticket, 'token_types': token_types}
+    tickets = {'ticket': ticket, 'token_types': ["4"]}
     body = json.dumps(tickets, ensure_ascii=False)
 
     req = await aiorequests.post(
@@ -217,16 +197,16 @@ def mihoyo_headers(cookie, q='', b=None) -> dict:
         :return: headers
     """
     return {
+        'Accept':               'application/json, text/plain, */*',
         'Origin':               'https://webstatic.mihoyo.com',
-        'X-Requested-With':     'com.mihoyo.hyperion',
         'x-rpc-page':           'v6.6.1-gr-cn_#/ys',
-        'x-rpc-app_version':    '2.90.1',
+        'x-rpc-tool_verison':   'v6.6.1-gr-cn',
+        'x-rpc-app_version':    f'{BBS_VERSION}',
         'x-rpc-device_fp':      '38d81926460a0',
         'x-rpc-device_name':    'OPPO Find X7',
         'x-rpc-device_id':      'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
-        'x-rpc-tool_verison':   'v6.6.1-gr-cn',
         'x-rpc-client_type':    '5',
-        'User-Agent':           'Mozilla/5.0 (Linux; Android 12; V2309A Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/110.0.5481.154 Safari/537.36 miHoYoBBS/2.108.0',
+        'User-Agent':           f'Mozilla/5.0 (Linux; Android 13; Pixel 5 Build/TQ3A.230901.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/118.0.0.0 Mobile Safari/537.36 miHoYoBBS/{BBS_VERSION}',
         'Referer':              'https://webstatic.mihoyo.com/',
         'Cookie':               cookie,
         'DS':                   get_ds_x4(q, b),
@@ -252,13 +232,13 @@ def mihoyo_sign_headers(cookie: str, extra_headers: Optional[dict] = None) -> di
         'x-rpc-client_type':    '2',
         'x-rpc-channel':        'miyousheluodi',
         'x-rpc-csm_source':     'discussion',
-        'x-rpc-app_version':    '2.90.1',
+        'x-rpc-app_version':    f'{BBS_VERSION}',
         'x-rpc-sys_version':    '12',
         'Referer':              'https://app.mihoyo.com',
         'Host':                 'bbs-api.miyoushe.com',
         "Content-Type":         "application/json; charset=UTF-8",
         'Cookie':               cookie,
-        'DS':                   get_old_version_ds(mhy_bbs=False),
+        'DS':                   get_old_version_ds(web=False),
     }
     if extra_headers:
         header.update(extra_headers)
@@ -487,37 +467,63 @@ async def get_role_combat_info(
 async def get_mihoyo_public_data(
         uid: str,
         user_id: Optional[str],
-        mode: Literal['abyss', 'player_card', 'role_detail'],
+        mode: Literal['player_card', 'role_detail'],
 ):
     server_id = 'cn_qd01' if uid[0] == '5' else 'cn_gf01'
     check = True
-    while True:
-        cookie_info = await get_cookie(user_id, uid, check)
-        check = False
-        if not cookie_info:
-            return '当前没有可使用的cookie，请使用命令[原神扫码绑定]/[ysb]绑定私人cookie或联系超级管理员添加公共cookie，'
-        elif mode == 'player_card':
+    k = 0
+    ocr = rrocr()
+
+    cookie_info = await get_cookie(user_id, uid, check)
+    if not cookie_info:
+         return '当前没有可使用的cookie，请使用命令[原神扫码绑定]/[ysb]绑定私人cookie或联系超级管理员添加公共cookie，'
+    elif mode == 'player_card':
+        challenge = None
+        headers = mihoyo_headers(q = f'role_id={uid}&server={server_id}&avatar_list_type=1', cookie = cookie_info.extra_cookie)
+        headers.update({
+            'Host':             'api-takumi-record.mihoyo.com',
+            'x-rpc-device_fp':  '38d7f236aea34',
+            'x-rpc-device_id':  await get_device_id(cookie_info.extra_cookie)
+        })
+        for i in range(3):
+            if i != 0:
+                logger.info('原神信息查询', f'➤ 触发验证码，即将进行第{i}次重试，最多3次')
             data = await aiorequests.get(
-                url=PLAYER_CARD_API,
-                headers=mihoyo_headers(
-                    q=f'role_id={uid}&server={server_id}', cookie=cookie_info.cookie
-                ),
-                params={'server': server_id, 'role_id': uid},
+                url = PLAYER_CARD_API,
+                headers = headers,
+                params = {'server': server_id, 'role_id': uid, 'avatar_list_type': '1'},
             )
-        elif mode == 'role_detail':
-            json_data = {"server": server_id, "role_id": uid, "character_ids": []}
-            data = await aiorequests.post(
-                url=CHARACTER_DETAIL_API,
-                headers=mihoyo_headers(b=json_data, cookie=cookie_info.cookie),
-                json=json_data,
-            )
-        else:
-            data = None
+            data = data.json()
+            if data['retcode'] == 1034 and k < 2:
+                k += 1
+                logger.info('原神信息查询', '遭遇验证码，正尝试过码')
+                challenge = await ocr.get_pass_challenge(cookie_info)
+                if challenge is not None:
+                    headers.update({"challenge": challenge})
+                    continue
+                else:
+                    logger.info('原神信息查询', '过码失败')
+                    return "遇到验证码，但是过码失败"
+            elif data['retcode'] == 0:
+                logger.info('原神深渊战报', f'过码成功' if k > 0 else f"获取数据成功")
+                if await check_retcode(data, cookie_info, user_id, uid):
+                    return data
+            else:
+                return '获取数据失败'
+        if challenge is not None:
+            headers.pop("x-rpc-challenge")
+    elif mode == 'role_detail':
+        json_data = {"server": server_id, "role_id": uid, "character_ids": []}
+        data = await aiorequests.post(
+            url = CHARACTER_DETAIL_API,
+            headers = mihoyo_headers(b = json_data, cookie = cookie_info.cookie),
+            json = json_data,
+        )
         data = data.json() if data else {'retcode': 999}
-        nb_logger.debug(data)
         if await check_retcode(data, cookie_info, user_id, uid):
             return data
-
+    else:
+        return None
 
 async def get_mihoyo_private_data(
         uid: str,
@@ -678,9 +684,9 @@ async def get_authkey_by_stoken(
         "Host": "api-takumi.mihoyo.com",
     }
     data = await aiorequests.post(
-        url=AUTHKEY_API,
-        headers=headers,
-        json={
+        url = AUTHKEY_API,
+        headers = headers,
+        json = {
             'auth_appid': 'webview_gacha',
             'game_biz': 'hk4e_cn',
             'game_uid': uid,

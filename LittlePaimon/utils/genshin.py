@@ -139,7 +139,7 @@ class GenshinInfoManager:
         elif data['retcode'] != 0:
             logger.info('原神信息', f'更新<m>{self.uid}</m>的玩家数据时出错，消息为<r>{data["message"]}</r>')
             return data['message']
-        await PlayerInfo.update_info(self.user_id, self.uid, data['data'], 'enka')
+        await PlayerInfo.update_info(self.user_id, self.uid, data['data'], 'mihoyo')
         chara_data = await get_mihoyo_public_data(self.uid, self.user_id, 'role_detail')
         if not isinstance(chara_data, dict):
             return chara_data
