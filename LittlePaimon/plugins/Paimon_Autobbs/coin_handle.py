@@ -20,9 +20,9 @@ bbs_Cookieurl2 = 'https://api-takumi.mihoyo.com/auth/api/getMultiTokenByLoginTic
 
 bbs_Taskslist = 'https://bbs-api.miyoushe.com/apihub/wapi/getUserMissionsState?point_sn=myb'
 bbs_Signurl = 'https://bbs-api.miyoushe.com/apihub/app/api/signIn'
-bbs_Listurl = 'https://bbs-api.mihoyo.com/post/api/getForumPostList?forum_id={}&is_good=false&is_hot=false&page_size=20&sort_type=1'
+bbs_Listurl = 'https://bbs-api.miyoushe.com/post/api/getForumPostList?forum_id={}&is_good=false&is_hot=false&page_size=20&sort_type=1'
 bbs_Detailurl = 'https://bbs-api.miyoushe.com/post/api/getPostFull?post_id={}&csm_source=home'
-bbs_Shareurl = 'https://bbs-api.mihoyo.com/apihub/api/getShareConf?entity_id={}&entity_type=1'
+bbs_Shareurl = 'https://bbs-api.miyoushe.com/apihub/api/getShareConf?entity_id={}&entity_type=1'
 bbs_Likeurl = 'https://bbs-api.miyoushe.com/post/api/post/upvote'
 # 旧版api
 # bbs_Detailurl = 'https://bbs-api.mihoyo.com/post/api/getPostFull?post_id={}'
@@ -34,19 +34,19 @@ mihoyo_bbs_List = [
         'forumId': '26',
         'name':    '原神',
         'url':     'https://bbs.mihoyo.com/ys/',
-    },
-    {
-        'id':      '5',
-        'forumId': '34',
-        'name':    '大别野',
-        'url':     'https://bbs.mihoyo.com/dby/',
-    },
-    {
-        'id':      '6',
-        'forumId': '52',
-        'name':    '崩坏：星穹铁道',
-        'url':     'https://bbs.mihoyo.com/sr/',
     }
+    # {
+    #     'id':      '5',
+    #     'forumId': '34',
+    #     'name':    '大别野',
+    #     'url':     'https://bbs.mihoyo.com/dby/',
+    # },
+    # {
+    #     'id':      '6',
+    #     'forumId': '52',
+    #     'name':    '崩坏：星穹铁道',
+    #     'url':     'https://bbs.mihoyo.com/sr/',
+    # }
     # {
     #     'id':      '1',
     #     'forumId': '1',
@@ -197,54 +197,59 @@ class MihoyoBBSCoin:
             [d['post']['post_id'], d['post']['subject']] for d in data['data']['list'][:5]
         ]
 
-        logger.info('米游币自动获取', '➤➤获取帖子列表成功')
+        logger.info('米游币自动获取', '➤➤ 获取帖子列表成功')
 
     # 进行签到操作
     async def signing(self):
         """
         讨论区签到
         """
-        k = 0
         if self.Task_do['bbs_Sign']:
             return '讨论区签到：已经完成过了~'
-
         for i in self.mihoyo_bbs_List:
-            challenge = None
-            for retry_count in range(3):
-                if retry_count != 0:
-                    logger.info('米游币自动获取', f'触发验证码，即将进行第{retry_count}次重试，最多2次')
+            logger.info('米游币自动获取', f'➤➤ 正在社区打卡: {i["name"]}')
+            gids = {'gids': i['id']}
+            ds = get_ds_x6('', gids) # type: ignore
+            body = json.dumps(gids)
+            self.headers.update({'DS': ds})
 
-                self.headers.update({'DS': get_ds_x6('', {'gids': i['id']})})
-                body = json.dumps({'gids': i['id']})
-                req = await aiorequests.post(
-                    url = bbs_Signurl,
-                    headers = self.headers,
-                    data = body
-                )
-                data = req.json()
-                if data['retcode'] == 0:
-                    logger.info('米游币自动获取', '➤➤讨论区签到<g>完成</g>')
-                    return '讨论区签到：完成！'
-                elif data['retcode'] == 1034 and k < 2:
-                    k += 1
-                    logger.warning('米游币自动获取', f'➤➤遇验证码阻拦，正在尝试打码')
-                    challenge = await self.geetest.get_pass_challenge(self.cookies)
+            req = await aiorequests.post(url = bbs_Signurl, headers = self.headers, data = body) # type: ignore
+            data = req.json()
+            if data['retcode'] == 1034:
+                logger.warning('米游币自动获取', '➤➤ 遭遇验证码，正尝试过码')
+                challenge = None
+                for retry_count in range(1, 3):
+                    logger.info('米游币自动获取', f'➤➤ 即将进行第{retry_count}次重试，最多2次')
+                    challenge = await self.geetest.get_pass_challenge(self.cookies, ds)
                     if challenge is not None:
-                        self.headers.update({'x-rpc-challenge': challenge})
-                        logger.warning('米游币自动获取', f'➤➤打码成功')
+                        self.headers.update({'x-rpc-challenge':  challenge})
+                        result = await aiorequests.post(url = bbs_Signurl, headers = self.headers, data = body) # type: ignore
+                        result = result.json()
+                        print(result)
+                        if result['retcode'] == 0:
+                            self.state = '签到完成！'
+                            logger.success('米游币自动获取', '➤➤ 讨论区签到<g>完成</g>')
+                        elif result['retcode'] == 1034:
+                            self.state = '遭遇验证码，打码成功，但是验证失败'
+                            logger.success('米游币自动获取', '➤➤ 讨论区签到<r>失败</r>')
                     else:
-                        self.state = '触发验证码，尝试打码但失败'
-                        logger.warning('米游币自动获取', self.state)
-                elif data['retcode'] in [-100, 10001]:
-                    self.state = 'Cookie已失效'
-                else:
-                    self.is_valid = False
-                    self.state = f"出错了:{data['retcode']} {data['message']}"
-                    logger.info('米游币自动获取', f'➤➤<r>{self.state}</r>')
-            if challenge is not None:
-                self.headers.pop("x-rpc-challenge")
+                        self.state =  "遇到验证码，但是过码失败"
+                        logger.info('米游币自动获取', '➤➤ 过码失败')
+                    if retry_count == 2:
+                        break
+                if challenge is not None:
+                    self.headers.pop("x-rpc-challenge")
+            elif data['retcode'] == 0:
+                self.state = '签到完成！'
+                logger.info('米游币自动获取', '➤➤ 讨论区签到<g>完成</g>')
+            elif data['retcode'] in [-100, 10001]:
+                self.state = 'Cookie已失效'
+            else:
+                self.is_valid = False
+                self.state = f"出错了:{data['retcode']} {data['message']}"
+                logger.info('米游币自动获取', f'➤➤ <r>{self.state}</r>')
             await asyncio.sleep(random.randint(12, 20))
-        return f'讨论区签到：{self.state}'
+        return f'讨论区：{self.state}'
 
     async def read_posts(self):
         """
@@ -264,7 +269,7 @@ class MihoyoBBSCoin:
             if data['message'] == 'OK':
                 num_ok += 1
             await asyncio.sleep(random.randint(5, 10))
-        logger.info('米游币自动获取', '➤➤看帖任务<g>完成</g>')
+        logger.info('米游币自动获取', '➤➤ 看帖任务<g>完成</g>')
         return f'浏览帖子：完成{str(num_ok)}个！'
 
     async def like_posts(self):
@@ -283,11 +288,11 @@ class MihoyoBBSCoin:
                 headers = self.headers,
                 json = {
                     'post_id':      self.postsList[i][0],
+                    'game_uid':     self.uid,
                     'is_cancel':    False,
                     'region':       'cn_gf01',
                     'csm_source':   'home',
-                    'upvote_type':  '1',
-                    'game_uid':     self.uid
+                    'upvote_type':  '1'
                 }
             )
             data = req.json()
@@ -300,17 +305,17 @@ class MihoyoBBSCoin:
                 headers = self.headers,
                 json = {
                     'post_id':      self.postsList[i][0],
+                    'game_uid':     self.uid,
                     'is_cancel':    True,
                     'region':       'cn_gf01',
                     'csm_source':   'home',
-                    'upvote_type':  '0',
-                    'game_uid':     self.uid
+                    'upvote_type':  '0'
                 }
             )
             data = req.json()
             if data['message'] == 'OK':
                 num_cancel += 1
-        logger.info('米游币自动获取', '➤➤点赞任务<g>完成</g>')
+        logger.info('米游币自动获取', '➤➤ 点赞任务<g>完成</g>')
         await asyncio.sleep(random.randint(5, 10))
         return f'点赞帖子：完成{str(num_ok)}个{"，遇验证码" if num_ok == 0 else ""}！'
 
@@ -332,7 +337,7 @@ class MihoyoBBSCoin:
                 return '分享帖子：完成！'
             else:
                 await asyncio.sleep(random.randint(5, 10))
-        logger.info('米游币自动获取', '➤➤分享任务<g>完成</g>')
+        logger.info('米游币自动获取', '➤➤ 分享任务<g>完成</g>')
         await asyncio.sleep(random.randint(5, 10))
         return '分享帖子：完成！'
 
@@ -349,8 +354,11 @@ async def mhy_bbs_coin(user_id: str, uid: str) -> str:
         return '你尚未绑定Cookie和Stoken，请先用ysb指令绑定！'
     elif cookie.stoken is None:
         return '你绑定Cookie中没有login_ticket，请重新用ysb指令绑定！'
-    await LastQuery.update_or_create(user_id=user_id, defaults={'uid': uid, 'last_time': datetime.datetime.now()})
-    logger.info('米游币自动获取', '➤执行', {'用户': user_id, 'UID': uid, '的米游币获取': '......'})
+    await LastQuery.update_or_create(user_id = user_id, defaults = {
+        'uid':              uid,
+        'last_time':        datetime.datetime.now()
+    })
+    logger.info('米游币自动获取', '➤➤ 执行', {'用户': user_id, 'UID': uid, '的米游币获取': '......'})
     get_coin_task = MihoyoBBSCoin(cookie.stoken, cookie.extra_cookie, uid)
     result, msg = await get_coin_task.run()
     return msg if result else f'UID{uid}{msg}'

@@ -44,7 +44,7 @@ class GenshinInfoManager:
         await LastQuery.update_last_query(self.user_id, self.uid)
         mihoyo_result = await self.update_from_mihoyo()
         result += f'米游社数据：{mihoyo_result}\n'
-        logger.success(f'米游社数据：{mihoyo_result}')
+        logger.success(f'米游社数据', '➤', result = mihoyo_result)
 
         if include_talent:
             if await self.is_bind():
@@ -139,6 +139,9 @@ class GenshinInfoManager:
         elif data['retcode'] != 0:
             logger.info('原神信息', f'更新<m>{self.uid}</m>的玩家数据时出错，消息为<r>{data["message"]}</r>')
             return data['message']
+        elif data['retcode'] == 0:
+            logger.info('原神信息', f'➤UID<m>{self.uid}</m><g>更新玩家信息成功</g>')
+            return '更新成功'
         await PlayerInfo.update_info(self.user_id, self.uid, data['data'], 'mihoyo')
         chara_data = await get_mihoyo_public_data(self.uid, self.user_id, 'role_detail')
         if not isinstance(chara_data, dict):
@@ -148,8 +151,6 @@ class GenshinInfoManager:
             return chara_data['message']
         for character in chara_data['data']['avatars']:
             await Character.update_info(self.user_id, self.uid, character, 'mihoyo')
-        logger.info('原神信息', f'➤UID<m>{self.uid}</m><g>更新玩家信息成功</g>')
-        return '更新成功'
 
     async def update_game_record(
             self,
@@ -277,8 +278,7 @@ class GenshinInfoManager:
                 character_list.append(character)
         return player_info, character_list
 
-    async def get_player_info(self) -> tuple[dict[str, str | Any], None] | tuple[str, None] | tuple[
-        PlayerInfo | None, list[Character | None]]:
+    async def get_player_info(self) -> tuple[dict[str, str | Any], None] | tuple[str, None] | tuple[PlayerInfo | None, list[Character | None]]:
         await LastQuery.update_last_query(self.user_id, self.uid)
         player_info = await PlayerInfo.get_or_none(user_id=self.user_id, uid=self.uid)
         if player_info is None or player_info.update_time is None or player_info.update_time < (

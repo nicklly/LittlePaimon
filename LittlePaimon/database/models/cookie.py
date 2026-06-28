@@ -14,6 +14,8 @@ class PublicCookie(Model):
     """cookie内容"""
     status: int = fields.IntField(default=1)
     """cookie状态，0为疑似失效，1为可用，2为每日限制，3为暂停使用"""
+    extra_cookie: str = fields.TextField(null=True)
+    """额外cookie内容"""
 
     class Meta:
         table = 'public_cookie'
@@ -84,6 +86,8 @@ class CookieCache(Model):
     """原神uid"""
     cookie: str = fields.TextField()
     """cookie内容"""
+    extra_cookie: str = fields.TextField(null=True)
+    """额外cookie内容"""
 
     class Meta:
         table = 'cookie_cache'

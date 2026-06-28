@@ -165,18 +165,18 @@ async def draw_player_card(player: Player, info: PlayerInfo, characters: List[Ch
                                     fm.get('hywh', 48), 'black', 'center') for i in range(len(base_data))])
 
     # 尘歌壶
-    # home_data = [info.home.level, info.home.comfort_value, info.home.item_num, info.home.visit_num]
-    # await asyncio.gather(*[
-    #     i=mg.text(str(home_data[i]), (155 + 225 * (i % 4), 252 + 225 * (i % 4)), 961, fm.get('hywh', 48), 'black',
-    #              'center') for i in range(len(home_data))])
-    # home_name = {'罗浮洞': 168, '翠黛峰': 336, '清琼岛': 505, '绘绮庭': 673, '妙香林': 841}
-    # await asyncio.gather(*[
-    #     img.text(name if name in info.home.unlock else '未解锁', home_name[name], 923, fm.get('hywh', 24),
-    #              (0, 0, 0, 153), 'center') for name in home_name])
-    print(info.world_explore)
+    home_data = [info.home.level, info.home.comfort_value, info.home.item_num, info.home.visit_num]
+    await asyncio.gather(*[
+        img.text(str(home_data[i]), (155 + 225 * (i % 4), 252 + 225 * (i % 4)), 961, fm.get('hywh', 48), 'black',
+                 'center') for i in range(len(home_data))])
+    home_name = {'罗浮洞': 168, '翠黛峰': 336, '清琼岛': 505, '绘绮庭': 673, '妙香林': 841}
+    await asyncio.gather(*[
+        img.text(name if name in info.home.unlock else '未解锁', home_name[name], 923, fm.get('hywh', 24),
+                 (0, 0, 0, 153), 'center') for name in home_name])
+
     # 世界探索
-    # for w in info.world_explore.list():
-    #     await draw_world_card(img, w)
+    for w in info.world_explore.list():
+        await draw_world_card(img, w)
 
     # 角色
     await asyncio.gather(
