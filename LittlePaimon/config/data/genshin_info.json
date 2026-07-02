@@ -3693,6 +3693,36 @@
     "QualityType": "QUALITY_PURPLE",
     "WeaponType": "WEAPON_CATALYST"
   },
+  "10000133": {
+    "Element": "Ice",
+    "Consts": [
+      "UI_Talent_S_MarionetteNew_01",
+      "UI_Talent_S_MarionetteNew_02",
+      "UI_Talent_U_MarionetteNew_01",
+      "UI_Talent_S_MarionetteNew_03",
+      "UI_Talent_U_MarionetteNew_02",
+      "UI_Talent_S_MarionetteNew_04"
+    ],
+    "SkillOrder": [
+      11331,
+      11332,
+      11335
+    ],
+    "Skills": {
+      "11321": "Skill_A_04",
+      "11322": "Skill_S_MarionetteNew_01",
+      "11325": "Skill_E_MarionetteNew_01"
+    },
+    "ProudMap": {
+      "11331": 13331,
+      "11332": 13332,
+      "11335": 13339
+    },
+    "NameTextMapHash": 108893506,
+    "SideIconName": "UI_AvatarIcon_Side_MarionetteNew",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_CLAYMORE"
+  },
   "10000902": {
     "Element": "Fire",
     "Consts": [

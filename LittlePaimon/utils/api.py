@@ -5,14 +5,12 @@ import random
 import string
 import uuid
 import time
-from os.path import defpath
+from urllib.parse import urlparse
 from typing import Optional, Literal, Union, Tuple
-
 from nonebot import logger as nb_logger
 from tortoise.queryset import Q
-
 from LittlePaimon.config import config
-from LittlePaimon.database import PublicCookie, PrivateCookie, CookieCache
+from LittlePaimon.database import PublicCookie, PrivateCookie, CookieCache, Devices
 from LittlePaimon.utils.captcha import rrocr
 from LittlePaimon.utils import logger
 from .requests import aiorequests
@@ -37,14 +35,14 @@ COOKIE_TOKEN_API = 'https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoB
 SCAN_STATUS_API = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/scanQRLogin'
 CONFIRM_STATUS_API = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/confirmQRLogin'
 LOGIN_TICKET_INFO_API = 'https://webapi.account.mihoyo.com/Api/cookie_accountinfo_by_loginticket'
+WIDGET_URL = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/aapi/widget/v2?game_id=2'
 
-BBS_VERSION = '2.90.1'
+BBS_VERSION = '2.108.0'
 
 
 def md5(text: str) -> str:
     """
     md5加密
-
     :param text: 文本
     :return: md5加密后的文本
     """
@@ -55,7 +53,6 @@ def md5(text: str) -> str:
 def random_hex(length: int) -> str:
     """
     生成指定长度的随机字符串
-
     :param length: 长度
     :return: 随机字符串
     """
@@ -67,7 +64,6 @@ def random_hex(length: int) -> str:
 def random_text(length: int) -> str:
     """
     生成指定长度的随机字符串
-
     :param length: 长度
     :return: 随机字符串
     """
@@ -76,7 +72,6 @@ def random_text(length: int) -> str:
 def get_ds(q: str = '', b: dict = None) -> str:
     """
     生成米游社headers的ds_token
-
     :param q: 查询
     :param b: 请求体
     :return: ds_token
@@ -91,7 +86,6 @@ def get_ds(q: str = '', b: dict = None) -> str:
 def get_ds_x4(q: str = '', b: dict = None) -> str:
     """
     生成米游社headers的ds_token
-
     :param q: 查询
     :param b: 请求体
     :return: ds_token
@@ -106,7 +100,6 @@ def get_ds_x4(q: str = '', b: dict = None) -> str:
 def get_ds_x6(q: str = '', b: str = None) -> str:
     """
     生成米游社headers的ds_token
-
     :param q: 查询
     :param b: 请求体
     :return: ds_token
@@ -130,7 +123,7 @@ def get_old_version_ds(web: bool = False) -> str:
     c = md5(f"salt={s}&t={t}&r={r}")
     return f"{t},{r},{c}"
 
-def qrcode_permission_headers(cookies: str):
+def qrcode_permission_headers(cookies: Optional[str]):
     return {
         'DS':                   get_old_version_ds(web=False),
         'cookie':               cookies,
@@ -161,14 +154,25 @@ def login_permission_headers(ticket: Optional[dict] = None, auth_cookie: Optiona
         'x-rpc-app_id':             'bll8iq97cem8',
         'x-rpc-sdk_version':        f'{BBS_VERSION}',
         'x-rpc-client_type':        '2',
+        'x-rpc-device_name':        'OPPO Find X7',
         'x-rpc-device_fp':          '38d81926460a0',
         'x-rpc-device_id':          'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
         'x-rpc-device_model':       'PHZ110',
         'x-rpc-game_biz':           'bbs_cn',
         'x-rpc-account_version':    f'{BBS_VERSION}',
-        'x-rpc-device_name':        'Mihoyo Capture',
         'User-Agent':               f'Mozilla/5.0 miHoYoBBS/{BBS_VERSION} Capture/2.2.0'
     }
+
+async def get_widget_data(cookie: str):
+    query = urlparse(WIDGET_URL).query
+    sorted_query = '&'.join(sorted(query.split('&'))) if query else ''
+    headers = mihoyo_headers(cookie=cookie)
+    headers.update({
+        'DS':       get_ds_x6(q=sorted_query)
+    })
+    data = await aiorequests.get(url=WIDGET_URL, headers=headers)
+    data = data.json()
+    return data
 
 async def check_qrcode_status(url: str, ticket: str, auth_cookie:str, referer: str = '') -> bool:
     tickets = {'ticket': ticket, 'token_types': ["4"]}
@@ -177,7 +181,7 @@ async def check_qrcode_status(url: str, ticket: str, auth_cookie:str, referer: s
     req = await aiorequests.post(
         url = url,
         headers = login_permission_headers(tickets, auth_cookie, referer),
-        data = body
+        data = body # type: ignore
     )
     try:
         result = req.json()
@@ -206,6 +210,7 @@ def mihoyo_headers(cookie, q='', b=None) -> dict:
         'x-rpc-client_type':    '5',
         'x-rpc-sys_version':    '12',
         'X-Requested-With':     'com.mihoyo.hyperion',
+        'x-rpc-challenge':      '',
         'User-Agent':           f'Mozilla/5.0 (Linux; Android 13; Pixel 5 Build/TQ3A.230901.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/118.0.0.0 Mobile Safari/537.36 miHoYoBBS/{BBS_VERSION}',
         'Referer':              'https://webstatic.mihoyo.com/',
         'Cookie':               cookie,
@@ -310,10 +315,18 @@ async def get_device_id(cookie: str) -> str:
     """
     使用 cookie 通过 uuid v3 生成设备 ID。
     :param cookie: cookie
-
     :return: 设备 ID。
     """
     return str(uuid.uuid3(uuid.NAMESPACE_URL, cookie))
+
+async def get_device_info(
+        user_id: str
+) -> Union[None, Devices]:
+    if device_info := await Devices.filter(Q(user_id=user_id)).first():
+        return device_info
+    else:
+        return None
+
 
 async def get_cookie(
         user_id: str, uid: str, check: bool = True, own: bool = False
@@ -368,15 +381,20 @@ async def get_Abyss2_info(
         user_id: Optional[str],
 ):
     cookie_info = await get_cookie(user_id, uid, True)
+    device_info = await get_device_info(user_id)
     if not cookie_info:
         return '当前没有可使用的cookie，请使用命令[原神扫码绑定]/[ysb]绑定私人cookie或联系超级管理员添加公共cookie，'
     server_id = 'cn_qd01' if uid[0] == '5' else 'cn_gf01'
     headers = mihoyo_headers(
         q=f'role_id={uid}&need_detail=True&server={server_id}',
-        cookie=cookie_info.extra_cookie,
+        cookie=cookie_info.cookie,
     )
-    headers['x-rpc-device_fp'] = '38d7f236aea34'
-    headers["x-rpc-device_id"] = await get_device_id(cookie_info.extra_cookie)
+    headers.update({
+        'x-rpc-device_name':        device_info.device_name,
+        'x-rpc-device_fp':          device_info.device_fp,
+        'x-rpc-device_id':          device_info.device_id,
+        'x-rpc-device_model':       device_info.device_model,
+    })
     data: dict = (
         await aiorequests.get(
             url=HARD_CHALLENGE_API,
@@ -397,59 +415,87 @@ async def get_abyss_info(
 ):
     server_id = 'cn_qd01' if uid[0] == '5' else 'cn_gf01'
     cookie_info = await get_cookie(user_id, uid, True)
-    ocr = rrocr(user_id, uid)
+    device_info = await get_device_info(user_id)
+    ocr = rrocr(user_id)
     if not cookie_info:
         return '当前没有可使用的cookie，请使用命令[原神扫码绑定]/[ysb]绑定私人cookie或联系超级管理员添加公共cookie，'
     headers = mihoyo_headers(
         q = f'role_id={uid}&schedule_type={schedule_type}&server={server_id}',
-        cookie = cookie_info.extra_cookie,
+        cookie = cookie_info.cookie,
     )
-    headers['x-rpc-device_fp'] = '38d7f236aea34'
-    headers["x-rpc-device_id"] = await get_device_id(cookie_info.extra_cookie)
-    k = 0
-    for i in range(4):
-        if i != 0:
+    headers.update({
+        'x-rpc-device_name':        device_info.device_name,
+        'x-rpc-device_fp':          device_info.device_fp,
+        'x-rpc-device_id':          device_info.device_id,
+        'x-rpc-device_model':        device_info.device_model,
+    })
+
+    data = await aiorequests.get(
+            url = ABYSS_API,
+            headers = headers,
+            params = {
+                "schedule_type": schedule_type,
+                "role_id": uid,
+                "server": server_id,
+            }
+    )
+    data = data.json()
+    if data['retcode'] == 1034:
+        logger.warning('原神深渊战报', '遭遇验证码，正尝试过码')
+        for i in range(1, 4):
             logger.info('原神深渊战报', f'触发验证码，即将进行第{i}次重试，最多3次')
-        data: dict = (
-            await aiorequests.get(
-                url = ABYSS_API,
-                headers = headers,
-                params = {
-                    "schedule_type": schedule_type,
-                    "role_id": uid,
-                    "server": server_id,
-                },
-            )
-        ).json()
-        if data['retcode'] == 1034 and k < 2:
-            k += 1
-            logger.info('原神深渊战报', '遭遇验证码，正尝试过码')
-            challenge = await ocr.get_pass_challenge(cookie_info)
+            challenge = await ocr.get_pass_challenge(cookie_info.extra_cookie, 'game')
             if challenge is not None:
-                headers.update({"challenge": challenge})
-                continue
+                headers.update({"x-rpc-challenge": challenge})
+                req = await aiorequests.get(
+                    url = ABYSS_API,
+                    headers = headers,
+                    params = {
+                        "schedule_type": schedule_type,
+                        "role_id": uid,
+                        "server": server_id,
+                    }
+                )
+                req = req.json()
+                if req['retcode'] == 0:
+                    logger.success('原神深渊战报', "打码成功，获取数据成功")
+                    return req
+                elif req['retcode'] == 10034:
+                    logger.warning('原神深渊战报', "打码失败，无法获取数据")
+                    return '打码失败，无法获取数据'
             else:
                 logger.info('原神深渊战报', '过码失败')
                 return "遇到验证码，但是过码失败"
-        elif data['retcode'] == 0:
-            logger.info('原神深渊战报', f'过码成功' if k > 0 else f"获取数据成功")
-            return data
-        return data['message']
+    elif data['retcode'] == 0:
+        logger.info('原神深渊战报', "获取数据成功")
+        return data
+    elif data['retcode'] == 5003:
+        logger.warning('原神深渊战报', "账号异常，暂时无法获取数据")
+        return '账号异常，暂时无法获取数据'
+    else:
+        logger.warning('原神深渊战报', "未知错误")
+        return '未知错误'
+    return data['message']
 
 async def get_role_combat_info(
         uid: str,
         user_id: Optional[str]
 ):
     cookie_info = await get_cookie(user_id, uid, True)
+    device_info = await get_device_info(user_id)
     if not cookie_info:
         return '当前没有可使用的cookie，请使用命令[原神扫码绑定]/[ysb]绑定私人cookie或联系超级管理员添加公共cookie，'
     server_id = 'cn_qd01' if uid[0] == '5' else 'cn_gf01'
     headers = mihoyo_headers(
         q=f'role_id={uid}&need_detail=True&server={server_id}&active=1',
-        cookie = cookie_info.extra_cookie,
-)
-    headers['x-rpc-device_fp'] = '38d7f236aea34'
-    headers["x-rpc-device_id"] = await get_device_id(cookie_info.cookie)
+        cookie = cookie_info.cookie,
+    )
+    headers.update({
+        'x-rpc-device_name':        device_info.device_name,
+        'x-rpc-device_fp':          device_info.device_fp,
+        'x-rpc-device_id':          device_info.device_id,
+        'x-rpc-device_model':        device_info.device_model,
+    })
     data: dict = (
         await aiorequests.get(
             url = ROLE_COMBAT_API,
@@ -471,16 +517,21 @@ async def get_mihoyo_public_data(
 ):
     server_id = 'cn_qd01' if uid[0] == '5' else 'cn_gf01'
     check = True
-    ocr = rrocr()
+    ocr = rrocr(user_id)
 
     cookie_info = await get_cookie(user_id, uid, check)
+    device_info = await get_device_info(user_id)
     if not cookie_info:
          return '当前没有可使用的cookie，请使用命令[原神扫码绑定]/[ysb]绑定私人cookie或联系超级管理员添加公共cookie，'
     elif mode == 'player_card':
-        headers = mihoyo_headers(q = f'role_id={uid}&server={server_id}&avatar_list_type=1', cookie = cookie_info.extra_cookie)
+        headers = mihoyo_headers(q = f'role_id={uid}&server={server_id}&avatar_list_type=1', cookie = cookie_info.cookie)
+        ds = get_ds_x4(q = f'role_id={uid}&server={server_id}&avatar_list_type=1')
+
         headers.update({
-            'x-rpc-device_fp':  '38d7f236aea34',
-            'x-rpc-device_id':  await get_device_id(cookie_info.extra_cookie)
+            'x-rpc-device_name':        device_info.device_name,
+            'x-rpc-device_fp':          device_info.device_fp,
+            'x-rpc-device_id':          device_info.device_id,
+            'x-rpc-device_model':       device_info.device_model,
         })
         data = await aiorequests.get(
             url = PLAYER_CARD_API,
@@ -491,9 +542,10 @@ async def get_mihoyo_public_data(
         if data['retcode'] == 1034:
             for i in range(1, 3):
                 logger.info('原神信息查询', f'➤ 触发验证码，即将进行第{i}次重试，最多3次')
-                challenge = await ocr.get_pass_challenge(cookie_info.extra_cookie)
+                challenge = await ocr.get_pass_challenge(cookie_info.extra_cookie, 'game')
                 if challenge is not None:
                     headers.update({
+                        'DS':                   ds,
                         "x-rpc-challenge":      challenge,
                     })
                     result = await aiorequests.get(
@@ -503,9 +555,11 @@ async def get_mihoyo_public_data(
                     )
                     result = result.json()
                     if result['retcode'] == 0:
-                        return '打码成功,数据获取成功'
+                        logger.success('原神信息查询', '打码成功,数据获取成功')
+                        return result
                     elif result['retcode'] == 1034:
-                        return '打码成功,但数据获取失败'
+                        logger.warning('原神信息查询','打码成功,但数据获取失败')
+                        return result
                 else:
                     logger.info('原神信息查询', '过码失败')
                     return "遇到验证码，但是过码失败"
@@ -522,7 +576,7 @@ async def get_mihoyo_public_data(
         json_data = {"server": server_id, "role_id": uid, "character_ids": []}
         data = await aiorequests.post(
             url = CHARACTER_DETAIL_API,
-            headers = mihoyo_headers(b = json_data, cookie = cookie_info.extra_cookie),
+            headers = mihoyo_headers(b = json_data, cookie = cookie_info.cookie),
             json = json_data,
         )
         data = data.json() if data else {'retcode': 999}
@@ -550,7 +604,7 @@ async def get_mihoyo_private_data(
             url = CHARACTER_SKILL_API,
             headers = mihoyo_headers(
                 q = f'uid={uid}&region={server_id}&avatar_id={role_id}',
-                cookie = cookie_info.extra_cookie,
+                cookie = cookie_info.cookie,
             ),
             params = {
                 "region":       server_id,
@@ -560,10 +614,8 @@ async def get_mihoyo_private_data(
         )
     elif mode == 'month_info':
         headers = {
-            'accept':                   'application/json, text/plain, */*',
             'Host':                     'act-hk4e-api.mihoyo.com',
-            'Cookie':                   cookie_info.extra_cookie,
-            'accept-encoding':          'gzip, deflate',
+            'Cookie':                   cookie_info.cookie,
             'origin':                   'https://webstatic.mihoyo.com',
             'referer':                  'https://webstatic.mihoyo.com/',
             'x-requested-with':         'com.mihoyo.hyperion',
@@ -579,21 +631,56 @@ async def get_mihoyo_private_data(
             },
         )
     elif mode == 'daily_note':
+        ocr = rrocr(user_id)
+        headers = mihoyo_headers(
+            q=f'role_id={uid}&server={server_id}', cookie=cookie_info.extra_cookie
+        )
+        ds = get_ds_x4(q = f'role_id={uid}&server={server_id}')
         data = await aiorequests.get(
             url = DAILY_NOTE_API,
-            headers = mihoyo_headers(
-                q=f'role_id={uid}&server={server_id}', cookie=cookie_info.extra_cookie
-            ),
+            headers = headers,
             params = {
                 "server":   server_id,
                 "role_id":  uid
             },
         )
+        data = data.json()
+        if data['retcode'] == 0:
+            if await check_retcode(data, cookie_info, user_id, uid):
+                return data
+        elif data['retcode'] == 5003:
+            result = await get_widget_data(cookie=cookie_info.extra_cookie)
+            print(result)
+        elif data['retcode'] == 1034:
+            challenge = ocr.get_pass_challenge(cookie_info=cookie_info.extra_cookie, mode='game')
+            if challenge is not None:
+                headers.update({
+                    'DS':                   ds,
+                    "x-rpc-challenge":      challenge,
+                })
+                req = await aiorequests.get(
+                    url = DAILY_NOTE_API,
+                    headers = headers,
+                    params = {
+                        "server":   server_id,
+                        "role_id":  uid
+                    },
+                )
+                req = req.json()
+                if req['retcode'] == 0:
+                    logger.success('原神实时便笺', '打码成功，获取数据成功')
+                    return req
+                elif req['retcode'] == 1034:
+                    logger.warning('原神实时便笺', '打码失败，获取数据失败')
+                    return req
+        else:
+            logger.warning('原神实时便笺', '未知错误')
+            return '未知错误'
     elif mode == 'sign_info':
         data = await aiorequests.get(
             url=SIGN_INFO_API,
             headers = {
-                'Cookie':           cookie_info.extra_cookie,
+                'Cookie':           cookie_info.cookie,
                 'x-rpc-signgame':   'hk4e',
                 'x-Requested-With': 'com.mihoyo.hyperion',
                 'Origin':           'https://act.mihoyo.com',
@@ -607,6 +694,7 @@ async def get_mihoyo_private_data(
                 'uid':          uid
             },
         )
+        data = data.json()
     elif mode == 'sign_action':
         data = await aiorequests.post(
             url = SIGN_ACTION_API,
@@ -617,10 +705,10 @@ async def get_mihoyo_private_data(
                 'region':       server_id
             },
         )
+        data = data.json()
+
     else:
         data = None
-    data = data.json() if data else {'retcode': 999}
-    nb_logger.debug(data)
     if await check_retcode(data, cookie_info, user_id, uid):
         return data
     else:
@@ -635,7 +723,11 @@ async def get_sign_reward_list() -> dict:
         'Referer':                  'https://act.mihoyo.com/'
     }
     resp = await aiorequests.get(
-        url=SIGN_REWARD_API, headers=headers, params={'act_id': 'e202311201442471'}
+        url = SIGN_REWARD_API,
+        headers = headers,
+        params = {
+            'act_id': 'e202311201442471'
+        }
     )
     data = resp.json()
     nb_logger.debug(data)

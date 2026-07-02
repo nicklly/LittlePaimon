@@ -36,7 +36,8 @@ DATABASE = {
                 abyss2_info.__name__,
                 role_combat.__name__,
                 character.__name__,
-                cookie.__name__
+                cookie.__name__,
+                devices.__name__
             ],
             'default_connection': 'paimon_genshin',
         },

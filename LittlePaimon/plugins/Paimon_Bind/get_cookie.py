@@ -12,21 +12,22 @@ from io import BytesIO
 from string import ascii_letters
 from string import digits
 
-
+from faker import Faker
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from nonebot import on_command, get_bot, get_app
 from nonebot.adapters.onebot.v11 import Bot, MessageSegment, MessageEvent, GroupMessageEvent
 
 from LittlePaimon.config import config
-from LittlePaimon.database.models import PrivateCookie, LastQuery
-from LittlePaimon.utils import NICKNAME
+from LittlePaimon.database.models import PrivateCookie, LastQuery, Devices
+from LittlePaimon.utils import NICKNAME, logger
 from LittlePaimon.utils.qrcode import generate_qrcode
 from LittlePaimon.utils.requests import aiorequests
 from LittlePaimon.utils.scheduler import scheduler
 from LittlePaimon.utils.api import get_bind_game_info, login_permission_headers, check_qrcode_status, SCAN_STATUS_API, \
     CONFIRM_STATUS_API
 from LittlePaimon.utils.message import fullmatch_rule
+from LittlePaimon.utils.devices import AndroidDeviceProvider
 
 CN_DS_SALT = 'JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS'
 CN_DS_SALT_V2 = 'OvOIsZRXrUbXoUlpQuhEx4tgAwNVUMmp'
@@ -51,11 +52,11 @@ def get_ds(salt_version=CN_DS_SALT, body=None, query=None) -> str:
     return f"{t},{r},{h}"
 
 async def create_login_data():
-
     headers = login_permission_headers()
-    headers.update(
-        {'x-rpc-client_type': '3'}
-    )
+    headers.update({
+        'x-rpc-client_type':    '3',
+        # 'x-rpc-app_id':         'ddxf5dufpuyo'
+    })
     res = await aiorequests.post(
         url = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/createQRLogin',
         headers = headers
@@ -84,19 +85,14 @@ async def create_extra_login_data():
 
 
 async def check_login(login_data: dict):
-    app_headers = {
-        'User-Agent':         'HYPContainer/1.3.3.182',
-        'x-rpc-app_id':       'ddxf5dufpuyo',
-        'x-rpc-client_type':  '3',
-        'x-rpc-device_id':    'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
-        'x-rpc-device_fp':    '38d81926460a0',
-        'x-rpc-device_name':  'OPPO Find X7',
-        'x-rpc-device_model': 'PHZ110',
-    }
-
+    headers = login_permission_headers()
+    headers.update({
+        'x-rpc-client_type':    '3',
+        'x-rpc-app_id':         'ddxf5dufpuyo'
+    })
     res = await aiorequests.post(
         url = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/queryQRLoginStatus',
-        headers = app_headers,
+        headers = headers,
         json = {
             'ticket': login_data['ticket']
         }
@@ -104,6 +100,7 @@ async def check_login(login_data: dict):
     return res
 
 async def get_extra_cookie(tickets: str):
+
     res = await aiorequests.post(
         url = 'https://passport-api.mihoyo.com/account/ma-cn-passport/web/queryQRLoginStatus',
         headers = login_permission_headers(),
@@ -189,7 +186,10 @@ async def check_qrcode():
             if status_data['retcode'] != 0:
                 send_msg = status_data['message']
                 running_login_data.pop(user_id)
+            elif status_data['data']['status'] == 'Scanned':
+                logger.info('原神扫码绑定','➤➤ 已扫码，请在手机端确认登录...')
             elif status_data['data']['status'] == 'Confirmed':
+                logger.info('原神扫码绑定','➤➤ 扫码成功，正在获取相关数据')
                 game_token = status_data['data']
                 running_login_data.pop(user_id)
 
@@ -211,7 +211,7 @@ async def check_qrcode():
                 confirm_result = await check_qrcode_status(CONFIRM_STATUS_API, result['ticket'], auth_cookie)
 
                 if None in (scan_result, confirm_result):
-                    send_msg = '请求被拒绝'
+                    logger.warning('原神扫码绑定','➤➤','请求被拒绝')
 
                 extra_cookie = await get_extra_cookie(result['ticket'])
 
@@ -225,6 +225,17 @@ async def check_qrcode():
                         for info in genshin_games:
                             send_msg += f'{info["nickname"]}({info["uid"]}) '
 
+                            fake = Faker()
+                            fake.add_provider(AndroidDeviceProvider)
+                            model, name = fake.device_full_info()
+                            await Devices.update_or_create(
+                                user_id = user_id,
+                                uid = info['uid'],
+                                device_id = fake.device_id(),
+                                device_name = name,
+                                device_model = model,
+                                device_fp = fake.generator_fingerprint()
+                            )
                             await PrivateCookie.update_or_create(
                                 user_id = user_id,
                                 uid = info['uid'],

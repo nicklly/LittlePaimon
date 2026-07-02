@@ -3,37 +3,24 @@ import string
 import hashlib
 import time
 import random
+import json
+from typing import Union
 from pathlib import Path
 from typing import Optional
-
 from LittlePaimon.utils.files import load_yaml
 from LittlePaimon.utils.logger import logger
-
+from tortoise.queryset import Q
 from LittlePaimon.utils.requests import aiorequests
+from LittlePaimon.database import Devices
 
 # 验证码
-BBS_VERSION = '2.90.1'
-BBS_CAPATCH = 'https://api-takumi-record.mihoyo.com/game_record/app/card/wapi/createVerification?is_high=true'
-    # "https://bbs-api.mihoyo.com/misc/api/createVerification?is_high=true"
-BBS_CAPTCHA_VERIFY = 'https://api-takumi-record.mihoyo.com/game_record/app/card/wapi/verifyVerification'
-    # https://bbs-api.mihoyo.com/misc/api/verifyVerification"
+BBS_VERSION = '2.109.0'
+RECORD_CAPTCHA = 'https://api-takumi-record.mihoyo.com/game_record/app/card/wapi/createVerification?is_high=true'
+RECORD_CAPTCHA_VERIFY = 'https://api-takumi-record.mihoyo.com/game_record/app/card/wapi/verifyVerification'
+BBS_CAPTCHA = 'https://bbs-api.miyoushe.com/misc/api/createVerification?is_high=true'
+BBS_CAPTCHA_VERIFY = 'https://bbs-api.miyoushe.com/misc/api/verifyVerification'
+
 rr = load_yaml(Path() / 'config' / 'rrocr.yml')
-
-
-captcha_headers = {
-    'Host':                     'api-takumi-record.mihoyo.com',
-    'Origin':                   'https://webstatic.mihoyo.com',
-    'Referer':                  'https://webstatic.mihoyo.com/',
-    'User-Agent':               f'Mozilla/5.0 (Linux; Android 13; Pixel 5 Build/TQ3A.230901.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/118.0.0.0 Mobile Safari/537.36 miHoYoBBS/{BBS_VERSION}',
-    'x-rpc-challenge_game':     '2',
-    'x-rpc-app_version':        f'{BBS_VERSION}',
-    'x-rpc-device_fp':          '38d819850c101',
-    'x-rpc-device_type':        '5',
-    'x-rpc-tool_verison':       'v6.6.1-gr-cn',
-    'x-rpc-page':               'v6.6.1-gr-cn_#/ys',
-    'x-rpc-sys_version':        ''
-
-}
 
 def md5(text: str) -> str:
     """
@@ -44,6 +31,20 @@ def md5(text: str) -> str:
     md5_ = hashlib.md5()
     md5_.update(text.encode())
     return md5_.hexdigest()
+
+def get_ds_x4(q: str = '', b: dict = None) -> str:
+    """
+    生成米游社headers的ds_token
+    :param q: 查询
+    :param b: 请求体
+    :return: ds_token
+    """
+    br = json.dumps(b) if b else ''
+
+    t = str(int(time.time()))
+    r = str(random.randint(100000, 200000))
+    c = md5(f'salt=xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs&t={t}&r={r}&b={br}&q={q}')
+    return f'{t},{r},{c}'
 
 def get_old_version_ds(web: bool = False) -> str:
     """
@@ -59,10 +60,43 @@ def get_old_version_ds(web: bool = False) -> str:
     return f"{t},{r},{c}"
 
 
+def record_captcha(ds: str, cookie_info: str, device_fp: str, device_id: str) -> dict:
+    return {
+        'DS':                       ds,
+        'cookie':                   cookie_info,
+        'Referer':                  'https://webstatic.mihoyo.com',
+        'x-rpc-client_type':        '5',
+        'x-rpc-challenge_game':     '2',
+        'x-rpc-challenge_path':     'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/index',
+        'x-rpc-app_version':        f'{BBS_VERSION}',
+        'x-rpc-device_fp':          device_fp,
+        'x-rpc-device_id':          device_id,
+        'User-Agent':               f'Mozilla/5.0 (Linux; Android 15) Mobile miHoYoBBS/{BBS_VERSION}',
+    }
+
+def bbs_captcha(cookie_info: str, device_id: str) -> dict:
+    return {
+        'DS':                                   get_old_version_ds(web=False),
+        'cookie':                               cookie_info,
+        'x-rpc-client_type':                    '2',
+        'x-rpc-app_version':                    BBS_VERSION,
+        'x-rpc-sys_version':                    '12',
+        'x-rpc-channel':                        'miyousheluodi',
+        'x-rpc-device_id':                      device_id,
+        'x-rpc-device_name':                    'OPPO Find X7',
+        'x-rpc-device_model':                   'PHZ110',
+        'x-rpc-h265_supported':                 '1',
+        'Referer':                              'https://app.mihoyo.com',
+        'Content-Type':                         'application/json; charset=UTF-8',
+        'Host':                                 'bbs-api.miyoushe.com',
+        'x-rpc-verify_key':                     'bll8iq97cem8',
+        'x-rpc-csm_source':                     'home',
+        'User-Agent':                           'okhttp/4.9.3',
+    }
+
 def random_hex(length: int) -> str:
     """
     生成指定长度的随机字符串
-
     :param length: 长度
     :return: 随机字符串
     """
@@ -74,11 +108,35 @@ def random_hex(length: int) -> str:
 
 class rrocr:
 
-    def __init__(self, user_id: Optional[str] = '', uid: Optional[str] = ''):
-        self.uid = uid
+    def __init__(self, user_id: Optional[str] = ''):
         self.user_id = user_id
+    # 打码狗
+    async def get_device_info(self) -> Union[None, Devices]:
+        if device_info := await Devices.filter(Q(user_id=self.user_id)).first():
+            return device_info
+        else:
+            return None
 
+    async def dmg_ocr(self, gt: str, challenge: str):
+        params: dict = {
+            "userkey": rr.get('dmg_apikey'),
+            "gt": gt,
+            "challenge": challenge,
+            "isJson": "2",
+            "success": '0'
+        }
+        data = await aiorequests.get(rr.get('dmg_api'), params=params, timeout=60)
+        data = data.json()
+        if data['status'] == '0':
+            return data['data']
+        return 'j'
+    # 小灰灰打码
     async def microgg_ocr(self, gt: str, challenge: str):
+        """
+        :param gt: gt码
+        :param challenge: challenge码
+        :return: 返回validate
+        """
         try:
             params = {
                 'token': rr.get('microgg_key'),
@@ -98,14 +156,17 @@ class rrocr:
                 else:
                     logger.info('小灰灰打码验证', '➤➤➤', {}, '请求 validate 失败', False)
                     return 'j'
-
+            else:
+                return None
+        else:
+            return None
+    # 套套打码
     async def tt_ocr(self, gt: str, challenge: str, referer: str):
         """
-
         :param gt: gt码
         :param challenge: challenge码
         :param referer: 引用链接
-        :return: 返回vaildate
+        :return: 返回validate
         """
         params = {
             "appkey": rr.get('tt_apikey'),
@@ -143,37 +204,40 @@ class rrocr:
                     await asyncio.sleep(1.5)
                     continue
                 break
-        else:
-            logger.info(
+            else:
+                logger.info(
                 "套套打码", info="➤➤", result="请求失败,可能是网络原因", result_type=False
-            )
+                )
             return "j"
         res = req.json()
         # 失败返回'j' 成功返回validate
         if "data" in res and "validate" in res["data"]:
             validate = res["data"]["validate"]
             return validate
+        else:
+            return None
 
-    async def get_validate(self, gt: str, challenge: str, referer: str):
+    async def get_validate(self, gt: str, challenge: str, referer: Optional[str] = ''):
         if rr.get('choose_ocr') == 'tt':
             return await self.tt_ocr(gt, challenge, referer)
-        # elif rr.get('choose_ocr') == 'rr':
-        #     return await self.rr_ocr(gt, challenge, referer)
         elif rr.get('choose_ocr') == 'xhh':
             return await self.microgg_ocr(gt, challenge)
+        elif rr.get('choose_ocr') == 'dmg':
+            return await self.dmg_ocr(gt, challenge)
+        else:
+            return None
 
-    async def get_pass_challenge(self, cookie_info):
+
+    async def get_pass_challenge(self, cookie_info, mode: Optional[str] = 'bbs'):
         """
-
+        :param ds:
         :param cookie_info: cookie信息
+        :param mode: 验证类型
         :return:
         """
         req = await aiorequests.get(
-            url = BBS_CAPATCH,
-            headers = captcha_headers.update({
-                'cookie':                   cookie_info,
-                'x-rpc-device_id':          'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
-            })
+            url = RECORD_CAPTCHA if mode == 'game' else BBS_CAPTCHA,
+            headers = record_captcha(get_ds_x4('is_high=true', ''), cookie_info) if mode == 'game' else bbs_captcha(cookie_info)
         )
         data = req.json()
         if data['retcode'] != 0:
@@ -181,21 +245,24 @@ class rrocr:
         validate = await self.get_validate(
             data['data']['gt'],
             data['data']['challenge'],
-            "https://webstatic.mihoyo.com/bbs/event/signin-ys/index.html?bbs_auth_required=true&act_id"
-            "=e202009291139501&utm_source=bbs&utm_medium=mys&utm_campaign=icon"
+            ''
         )
         if validate != 'j':
+            if rr.get('choose_ocr') == 'dmg':
+                result = validate.split('|')
+                challenge = result[0]
+                validate = result[1]
+            else:
+                challenge = data['data']['challenge']
+            params = {
+                "geetest_challenge":    challenge,
+                "geetest_seccode":      f"{validate}|jordan",
+                "geetest_validate":     validate,
+            }
             check_req = await aiorequests.post(
-                url=BBS_CAPTCHA_VERIFY,
-                headers = captcha_headers.update({
-                    'cookie':                   cookie_info,
-                    'x-rpc-device_id':          'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
-                }),
-                params = {
-                    "geetest_challenge": data["data"]["challenge"],
-                    "geetest_seccode": f"{validate}|jordan",
-                    "geetest_validate": validate,
-                },
+                url = RECORD_CAPTCHA_VERIFY if mode == 'game' else BBS_CAPTCHA_VERIFY,
+                headers = record_captcha(get_ds_x4('',params), cookie_info) if mode == 'game' else bbs_captcha(cookie_info),
+                params = params,
             )
             check = check_req.json()
             if check["retcode"] == 0:

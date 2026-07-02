@@ -731,7 +731,13 @@
     "1323": "同旅商队过山关，眼眸景色又转",
     "1324": "循风同行回头看，影子还缺一半",
     "1325": "输了一百次不算，明日接着再战",
-    "1326": "故事结尾在这儿，念给伙伴听完"
+    "1326": "故事结尾在这儿，念给伙伴听完",
+    "1331": "鎏金未凋，夕暮已远",
+    "1332": "回望镜中，时岁翩然",
+    "1333": "不叹日落，不羡月升",
+    "1334": "世事皆数，昼来夜往",
+    "1335": "万象皆灰，唯理明畅",
+    "1336": "水仙梦醒，且望晨光"
   },
   "Icon": {
     "21": "UI_Talent_S_Ayaka_01",
@@ -1465,6 +1471,12 @@
     "1323": "UI_Talent_U_Prune_01",
     "1324": "UI_Talent_S_Prune_03",
     "1325": "UI_Talent_U_Prune_02",
-    "1326": "UI_Talent_S_Prune_04"
+    "1326": "UI_Talent_S_Prune_04",
+    "1331": "UI_Talent_S_MarionetteNew_01",
+    "1332": "UI_Talent_S_MarionetteNew_02",
+    "1333": "UI_Talent_U_MarionetteNew_01",
+    "1334": "UI_Talent_S_MarionetteNew_03",
+    "1335": "UI_Talent_U_MarionetteNew_02",
+    "1336": "UI_Talent_S_MarionetteNew_04"
   }
 }

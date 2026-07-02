@@ -12,7 +12,7 @@ from LittlePaimon.database import PrivateCookie, MihoyoBBSSub, LastQuery
 from LittlePaimon.utils import logger, scheduler
 from LittlePaimon.utils.captcha import rrocr
 from LittlePaimon.utils.requests import aiorequests
-from LittlePaimon.utils.api import get_ds_x6, qrcode_permission_headers
+from LittlePaimon.utils.api import get_ds_x6, qrcode_permission_headers, get_device_info
 
 # 米游社的API列表
 bbs_Cookieurl = 'https://webapi.account.mihoyo.com/Api/cookie_accountinfo_by_loginticket?login_ticket={}'
@@ -84,6 +84,7 @@ class MihoyoBBSCoin:
         self.extra_cookie = extra_cookie
         self.uid = uid
         self.headers = qrcode_permission_headers(cookies)
+        self.device = get_device_info(uid)
         self.geetest = rrocr()
         self.postsList: list = []
         self.Task_do: dict = {
@@ -220,7 +221,7 @@ class MihoyoBBSCoin:
                 challenge = None
                 for retry_count in range(1, 3):
                     logger.info('米游币自动获取', f'➤➤ 即将进行第{retry_count}次重试，最多2次')
-                    challenge = await self.geetest.get_pass_challenge(self.cookies, ds)
+                    challenge = await self.geetest.get_pass_challenge(self.extra_cookie)
                     if challenge is not None:
                         self.headers.update({'x-rpc-challenge':  challenge})
                         result = await aiorequests.post(url = bbs_Signurl, headers = self.headers, data = body) # type: ignore
