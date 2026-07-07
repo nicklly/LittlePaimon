@@ -61,7 +61,7 @@ async def draw_daily_note_card(data, uid):
         await bg_img.text("洞天宝钱满了哦~", 820, 701, fm.get("优设标题黑.ttf", 40), "white")
     else:
         recover_time = datetime.datetime.now() + datetime.timedelta(
-            seconds=int(data["home_coin_recovery_time"])
+            seconds=int(data["resin_recovery_time"])
         )
         recover_time_day = recover_time.day - datetime.datetime.now().day
         if recover_time_day == 1:
@@ -87,37 +87,37 @@ async def draw_daily_note_card(data, uid):
         await bg_img.text("今日委托已全部完成~", 750, 924, fm.get("优设标题黑.ttf", 40), "white")
     else:
         await bg_img.text("今日委托完成情况", 790, 924, fm.get("优设标题黑.ttf", 40), "white")
-    # 质变文字
-    if data["transformer"]["obtained"]:
-        await bg_img.text(
-            f"{7 - data['transformer']['recovery_time']['Day']}/7",
-            337,
-            1147,
-            fm.get("number.ttf", 48),
-            "white",
-        )
-        await bg_img.draw_ring(
-            (266, 266),
-            (98, 1039),
-            percent=(7 - data["transformer"]["recovery_time"]["Day"]) / 7,
-            width=0.18,
-            colors=["#507bd0", "#FFFFFF"],
-        )
-        rt = data["transformer"]["recovery_time"]
-        if rt["Day"] == 0 and rt["reached"]:
-            await bg_img.text("可使用", 465, 1147, fm.get("优设标题黑.ttf", 40), "white")
-        elif rt["Day"] == 0 and not rt["reached"]:
-            await bg_img.text(
-                f"{rt['Hour']}时后", 463, 1127, fm.get("优设标题黑.ttf", 40), "white"
-            )
-            await bg_img.text("可使用", 465, 1167, fm.get("优设标题黑.ttf", 40), "white")
-        else:
-            await bg_img.text(
-                f"{rt['Day']}天后", 471, 1127, fm.get("优设标题黑.ttf", 40), "white"
-            )
-            await bg_img.text("可使用", 465, 1167, fm.get("优设标题黑.ttf", 40), "white")
-    else:
-        await bg_img.text("未获得", 337, 1143, fm.get("优设标题黑.ttf", 48), "white")
+    # # 质变文字
+    # if data["transformer"]["obtained"]:
+    #     await bg_img.text(
+    #         f"{7 - data['transformer']['recovery_time']['Day']}/7",
+    #         337,
+    #         1147,
+    #         fm.get("number.ttf", 48),
+    #         "white",
+    #     )
+    #     await bg_img.draw_ring(
+    #         (266, 266),
+    #         (98, 1039),
+    #         percent=(7 - data["transformer"]["recovery_time"]["Day"]) / 7,
+    #         width=0.18,
+    #         colors=["#507bd0", "#FFFFFF"],
+    #     )
+    #     rt = data["transformer"]["recovery_time"]
+    #     if rt["Day"] == 0 and rt["reached"]:
+    #         await bg_img.text("可使用", 465, 1147, fm.get("优设标题黑.ttf", 40), "white")
+    #     elif rt["Day"] == 0 and not rt["reached"]:
+    #         await bg_img.text(
+    #             f"{rt['Hour']}时后", 463, 1127, fm.get("优设标题黑.ttf", 40), "white"
+    #         )
+    #         await bg_img.text("可使用", 465, 1167, fm.get("优设标题黑.ttf", 40), "white")
+    #     else:
+    #         await bg_img.text(
+    #             f"{rt['Day']}天后", 471, 1127, fm.get("优设标题黑.ttf", 40), "white"
+    #         )
+    #         await bg_img.text("可使用", 465, 1167, fm.get("优设标题黑.ttf", 40), "white")
+    # else:
+    #     await bg_img.text("未获得", 337, 1143, fm.get("优设标题黑.ttf", 48), "white")
     # 周本文字
     await bg_img.text(
         f"{3 - data['remain_resin_discount_num']}/3",

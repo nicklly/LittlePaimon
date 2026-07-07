@@ -31,7 +31,6 @@ screenshot_cmd = on_command('网页截图', priority=10, block=True, rule=Rule(p
     'pm_priority':    1
 })
 
-
 @screenshot_cmd.handle()
 async def _(event: MessageEvent, msg: Message = CommandArg()):
     await screenshot_cmd.send('正在尝试截图，请稍等...')

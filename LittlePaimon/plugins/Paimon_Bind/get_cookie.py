@@ -6,18 +6,14 @@ import json
 import random
 import time
 import base64
-import re
 from hashlib import md5
 from io import BytesIO
 from string import ascii_letters
 from string import digits
-
-from faker import Faker
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from nonebot import on_command, get_bot, get_app
 from nonebot.adapters.onebot.v11 import Bot, MessageSegment, MessageEvent, GroupMessageEvent
-
 from LittlePaimon.config import config
 from LittlePaimon.database.models import PrivateCookie, LastQuery, Devices
 from LittlePaimon.utils import NICKNAME, logger
@@ -25,9 +21,9 @@ from LittlePaimon.utils.qrcode import generate_qrcode
 from LittlePaimon.utils.requests import aiorequests
 from LittlePaimon.utils.scheduler import scheduler
 from LittlePaimon.utils.api import get_bind_game_info, login_permission_headers, check_qrcode_status, SCAN_STATUS_API, \
-    CONFIRM_STATUS_API
+    CONFIRM_STATUS_API, get_Fp
 from LittlePaimon.utils.message import fullmatch_rule
-from LittlePaimon.utils.devices import AndroidDeviceProvider
+from LittlePaimon.utils.devices import DeviceProvider
 
 CN_DS_SALT = 'JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS'
 CN_DS_SALT_V2 = 'OvOIsZRXrUbXoUlpQuhEx4tgAwNVUMmp'
@@ -120,7 +116,7 @@ async def get_extra_cookie(tickets: str):
 
 async def get_cookie_token(aigis : str = '', data: dict = None, stoken: str = ''):
     res = await aiorequests.get(
-        url=f"https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken?",
+        url = f"https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken?",
         headers = {
             'x-rpc-app_version':  f'{BBS_VERSION}',
             'DS':                 get_ds(salt_version=CN_DS_SALT, body=data),
@@ -155,6 +151,13 @@ qrcode_bind = on_command('原神扫码绑定', aliases={'原神扫码登录', '�
 
 @qrcode_bind.handle()
 async def _(event: MessageEvent):  # sourcery skip: use-fstring-for-concatenation
+
+    from LittlePaimon.utils.api import get_device_info
+
+    devices = await get_device_info(str(event.user_id))
+    if devices is not None:
+        logger.warning('原神扫码绑定', f'{event.user_id}已有绑定信息，正在移除....,移除后开始新一轮信息绑定')
+        await devices.delete()
     if str(event.user_id) in running_login_data:
         await qrcode_bind.finish('你已经在绑定中了，请扫描上一次的二维码')
     login_data = await create_login_data()
@@ -224,17 +227,16 @@ async def check_qrcode():
                         send_msg = '成功绑定原神账号：'
                         for info in genshin_games:
                             send_msg += f'{info["nickname"]}({info["uid"]}) '
+                            devices = DeviceProvider()
+                            fingerprint = await get_Fp(info['uid'])
 
-                            fake = Faker()
-                            fake.add_provider(AndroidDeviceProvider)
-                            model, name = fake.device_full_info()
                             await Devices.update_or_create(
                                 user_id = user_id,
                                 uid = info['uid'],
-                                device_id = fake.device_id(),
-                                device_name = name,
-                                device_model = model,
-                                device_fp = fake.generator_fingerprint()
+                                device_id = devices.device_id(),
+                                device_name = devices.select_variant(info['uid']).ProductName,
+                                device_model = devices.select_variant(info['uid']).DeviceModel,
+                                device_fp = fingerprint,
                             )
                             await PrivateCookie.update_or_create(
                                 user_id = user_id,

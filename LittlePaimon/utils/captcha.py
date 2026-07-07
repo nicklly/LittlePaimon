@@ -4,14 +4,13 @@ import hashlib
 import time
 import random
 import json
-from typing import Union
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
+
+from LittlePaimon.database import Devices
 from LittlePaimon.utils.files import load_yaml
 from LittlePaimon.utils.logger import logger
-from tortoise.queryset import Q
 from LittlePaimon.utils.requests import aiorequests
-from LittlePaimon.database import Devices
 
 # 验证码
 BBS_VERSION = '2.109.0'
@@ -46,21 +45,24 @@ def get_ds_x4(q: str = '', b: dict = None) -> str:
     c = md5(f'salt=xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs&t={t}&r={r}&b={br}&q={q}')
     return f'{t},{r},{c}'
 
+
 def get_old_version_ds(web: bool = False) -> str:
     """
     生成米游社旧版本headers的ds_token
     """
     if web:
-        s = 'G1ktdwFL4IyGkHuuWSmz0wUe9Db9scyK'
+        # s = 'G1ktdwFL4IyGkHuuWSmz0wUe9Db9scyK'.
+        s = 'd9200c846b10886e8c874fc33c8f308b'
     else:
-        s = 'idMMaGYmVgPzh3wxmWudUXKUPGidO7GM'
+        # s = 'idMMaGYmVgPzh3wxmWudUXKUPGidO7GM'
+        s = '47f15f1b66bee46b816115d8e8e6ebb6'
     t = str(int(time.time()))
     r = ''.join(random.sample(string.ascii_lowercase + string.digits, 6))
     c = md5(f"salt={s}&t={t}&r={r}")
     return f"{t},{r},{c}"
 
 
-def record_captcha(ds: str, cookie_info: str, device_fp: str, device_id: str) -> dict:
+def record_captcha(ds: str, cookie_info: str, devices: Devices) -> dict:
     return {
         'DS':                       ds,
         'cookie':                   cookie_info,
@@ -68,13 +70,13 @@ def record_captcha(ds: str, cookie_info: str, device_fp: str, device_id: str) ->
         'x-rpc-client_type':        '5',
         'x-rpc-challenge_game':     '2',
         'x-rpc-challenge_path':     'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/index',
-        'x-rpc-app_version':        f'{BBS_VERSION}',
-        'x-rpc-device_fp':          device_fp,
-        'x-rpc-device_id':          device_id,
+        'x-rpc-app_version':        BBS_VERSION,
+        'x-rpc-device_fp':          devices.device_fp,
+        'x-rpc-device_id':          devices.device_id,
         'User-Agent':               f'Mozilla/5.0 (Linux; Android 15) Mobile miHoYoBBS/{BBS_VERSION}',
     }
 
-def bbs_captcha(cookie_info: str, device_id: str) -> dict:
+def bbs_captcha(cookie_info: str, devices: Devices) -> dict:
     return {
         'DS':                                   get_old_version_ds(web=False),
         'cookie':                               cookie_info,
@@ -82,15 +84,15 @@ def bbs_captcha(cookie_info: str, device_id: str) -> dict:
         'x-rpc-app_version':                    BBS_VERSION,
         'x-rpc-sys_version':                    '12',
         'x-rpc-channel':                        'miyousheluodi',
-        'x-rpc-device_id':                      device_id,
-        'x-rpc-device_name':                    'OPPO Find X7',
-        'x-rpc-device_model':                   'PHZ110',
+        'x-rpc-device_id':                      devices.device_id,
+        'x-rpc-device_name':                    devices.device_name,
+        'x-rpc-device_model':                   devices.device_model,
         'x-rpc-h265_supported':                 '1',
         'Referer':                              'https://app.mihoyo.com',
         'Content-Type':                         'application/json; charset=UTF-8',
         'Host':                                 'bbs-api.miyoushe.com',
         'x-rpc-verify_key':                     'bll8iq97cem8',
-        'x-rpc-csm_source':                     'home',
+        'x-rpc-csm_source':                     'discussion',
         'User-Agent':                           'okhttp/4.9.3',
     }
 
@@ -105,17 +107,12 @@ def random_hex(length: int) -> str:
         result = '0' * (length - len(result)) + result
     return result
 
-
 class rrocr:
 
     def __init__(self, user_id: Optional[str] = ''):
         self.user_id = user_id
     # 打码狗
-    async def get_device_info(self) -> Union[None, Devices]:
-        if device_info := await Devices.filter(Q(user_id=self.user_id)).first():
-            return device_info
-        else:
-            return None
+
 
     async def dmg_ocr(self, gt: str, challenge: str):
         params: dict = {
@@ -228,16 +225,23 @@ class rrocr:
             return None
 
 
-    async def get_pass_challenge(self, cookie_info, mode: Optional[str] = 'bbs'):
+    async def get_pass_challenge(self, cookie_info, user_id: str, mode: Optional[str] = 'bbs'):
         """
         :param ds:
         :param cookie_info: cookie信息
         :param mode: 验证类型
         :return:
         """
+        from LittlePaimon.utils.api import get_device_info
+        devices = await get_device_info(user_id)
+        headers = (
+            record_captcha(get_ds_x4('is_high=true', ''), cookie_info, devices = devices)
+            if mode == 'game' else
+            bbs_captcha(cookie_info, devices =  devices)
+        )
         req = await aiorequests.get(
             url = RECORD_CAPTCHA if mode == 'game' else BBS_CAPTCHA,
-            headers = record_captcha(get_ds_x4('is_high=true', ''), cookie_info) if mode == 'game' else bbs_captcha(cookie_info)
+            headers = headers
         )
         data = req.json()
         if data['retcode'] != 0:
@@ -259,9 +263,14 @@ class rrocr:
                 "geetest_seccode":      f"{validate}|jordan",
                 "geetest_validate":     validate,
             }
+            headers2 = (
+                record_captcha(ds = get_ds_x4('',params), cookie_info = cookie_info, devices = devices)
+                if mode == 'game' else
+                bbs_captcha(cookie_info, devices = devices)
+            )
             check_req = await aiorequests.post(
                 url = RECORD_CAPTCHA_VERIFY if mode == 'game' else BBS_CAPTCHA_VERIFY,
-                headers = record_captcha(get_ds_x4('',params), cookie_info) if mode == 'game' else bbs_captcha(cookie_info),
+                headers = headers2,
                 params = params,
             )
             check = check_req.json()

@@ -7,6 +7,7 @@ import json
 from collections import defaultdict
 from typing import Tuple
 from nonebot import get_bot
+
 from LittlePaimon.config import config
 from LittlePaimon.database import PrivateCookie, MihoyoBBSSub, LastQuery
 from LittlePaimon.utils import logger, scheduler
@@ -79,12 +80,12 @@ class MihoyoBBSCoin:
     米游币获取
     """
 
-    def __init__(self, cookies, extra_cookie, uid):
+    def __init__(self, cookies, extra_cookie, uid, user_id):
         self.cookies = cookies
         self.extra_cookie = extra_cookie
         self.uid = uid
+        self.user_id = user_id
         self.headers = qrcode_permission_headers(cookies)
-        self.device = get_device_info(uid)
         self.geetest = rrocr()
         self.postsList: list = []
         self.Task_do: dict = {
@@ -212,6 +213,7 @@ class MihoyoBBSCoin:
             gids = {'gids': i['id']}
             ds = get_ds_x6('', gids) # type: ignore
             body = json.dumps(gids)
+            # devices = await get_device_info(self.user_id)
             self.headers.update({'DS': ds})
 
             req = await aiorequests.post(url = bbs_Signurl, headers = self.headers, data = body) # type: ignore
@@ -221,15 +223,15 @@ class MihoyoBBSCoin:
                 challenge = None
                 for retry_count in range(1, 3):
                     logger.info('米游币自动获取', f'➤➤ 即将进行第{retry_count}次重试，最多2次')
-                    challenge = await self.geetest.get_pass_challenge(self.extra_cookie)
+                    challenge = await self.geetest.get_pass_challenge(self.cookies, user_id = self.user_id, mode = 'bbs')
                     if challenge is not None:
                         self.headers.update({'x-rpc-challenge':  challenge})
                         result = await aiorequests.post(url = bbs_Signurl, headers = self.headers, data = body) # type: ignore
                         result = result.json()
-                        print(result)
                         if result['retcode'] == 0:
                             self.state = '签到完成！'
                             logger.success('米游币自动获取', '➤➤ 讨论区签到<g>完成</g>')
+                            break
                         elif result['retcode'] == 1034:
                             self.state = '遭遇验证码，打码成功，但是验证失败'
                             logger.success('米游币自动获取', '➤➤ 讨论区签到<r>失败</r>')
@@ -360,7 +362,7 @@ async def mhy_bbs_coin(user_id: str, uid: str) -> str:
         'last_time':        datetime.datetime.now()
     })
     logger.info('米游币自动获取', '➤➤ 执行', {'用户': user_id, 'UID': uid, '的米游币获取': '......'})
-    get_coin_task = MihoyoBBSCoin(cookie.stoken, cookie.extra_cookie, uid)
+    get_coin_task = MihoyoBBSCoin(cookie.stoken, cookie.extra_cookie, uid, user_id)
     result, msg = await get_coin_task.run()
     return msg if result else f'UID{uid}{msg}'
 

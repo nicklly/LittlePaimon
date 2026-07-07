@@ -13,6 +13,7 @@ from LittlePaimon.config import config
 from LittlePaimon.database import PublicCookie, PrivateCookie, CookieCache, Devices
 from LittlePaimon.utils.captcha import rrocr
 from LittlePaimon.utils import logger
+from .devices import DeviceProvider
 from .requests import aiorequests
 
 # MIHOYO_API = 'https://api-takumi-record.mihoyo.com/'
@@ -24,7 +25,7 @@ PLAYER_CARD_API = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/
 CHARACTER_DETAIL_API = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/character'
 CHARACTER_SKILL_API = 'https://api-takumi.mihoyo.com/event/e20200928calculate/v1/sync/avatar/detail'
 MONTH_INFO_API = 'https://act-hk4e-api.mihoyo.com/event/ys_ledger/monthInfo'
-DAILY_NOTE_API = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/dailyNote'
+# DAILY_NOTE_API = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/dailyNote'
 GAME_RECORD_API = 'https://api-takumi-record.mihoyo.com/game_record/card/wapi/getGameRecordCard'
 SIGN_INFO_API = 'https://api-takumi.mihoyo.com/event/luna/hk4e/info'
 SIGN_REWARD_API = 'https://api-takumi.mihoyo.com/event/luna/home'
@@ -36,8 +37,9 @@ SCAN_STATUS_API = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/sc
 CONFIRM_STATUS_API = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/confirmQRLogin'
 LOGIN_TICKET_INFO_API = 'https://webapi.account.mihoyo.com/Api/cookie_accountinfo_by_loginticket'
 WIDGET_URL = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/aapi/widget/v2?game_id=2'
-
-BBS_VERSION = '2.108.0'
+GET_EXT_LIST_URL = "https://public-data-api.mihoyo.com/device-fp/api/getExtList"
+GET_FP_URL = 'https://public-data-api.mihoyo.com/device-fp/api/getFp'
+BBS_VERSION = '2.109.0'
 
 
 def md5(text: str) -> str:
@@ -115,9 +117,11 @@ def get_old_version_ds(web: bool = False) -> str:
     生成米游社旧版本headers的ds_token
     """
     if web:
-        s = 'G1ktdwFL4IyGkHuuWSmz0wUe9Db9scyK'
+        # s = 'G1ktdwFL4IyGkHuuWSmz0wUe9Db9scyK'.
+        s = 'd9200c846b10886e8c874fc33c8f308b'
     else:
-        s = 'idMMaGYmVgPzh3wxmWudUXKUPGidO7GM'
+        # s = 'idMMaGYmVgPzh3wxmWudUXKUPGidO7GM'
+        s = '47f15f1b66bee46b816115d8e8e6ebb6'
     t = str(int(time.time()))
     r = ''.join(random.sample(string.ascii_lowercase + string.digits, 6))
     c = md5(f"salt={s}&t={t}&r={r}")
@@ -128,7 +132,7 @@ def qrcode_permission_headers(cookies: Optional[str]):
         'DS':                   get_old_version_ds(web=False),
         'cookie':               cookies,
         'x-rpc-client_type':    '2',
-        'x-rpc-app_version':    '2.99.1',
+        'x-rpc-app_version':    BBS_VERSION,
         'x-rpc-sys_version':    '12',
         'x-rpc-channel':        'miyousheluodi',
         'x-rpc-device_id':      'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
@@ -150,29 +154,18 @@ def login_permission_headers(ticket: Optional[dict] = None, auth_cookie: Optiona
         'Cookie':                   auth_cookie,
         'DS':                       get_ds('', ticket),
         'referer':                  referer if referer is not None else '',
-        'x-rpc-app_version':        f'{BBS_VERSION}',
+        'x-rpc-app_version':        BBS_VERSION,
         'x-rpc-app_id':             'bll8iq97cem8',
-        'x-rpc-sdk_version':        f'{BBS_VERSION}',
+        'x-rpc-sdk_version':        BBS_VERSION,
         'x-rpc-client_type':        '2',
         'x-rpc-device_name':        'OPPO Find X7',
         'x-rpc-device_fp':          '38d81926460a0',
         'x-rpc-device_id':          'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
         'x-rpc-device_model':       'PHZ110',
         'x-rpc-game_biz':           'bbs_cn',
-        'x-rpc-account_version':    f'{BBS_VERSION}',
+        'x-rpc-account_version':    BBS_VERSION,
         'User-Agent':               f'Mozilla/5.0 miHoYoBBS/{BBS_VERSION} Capture/2.2.0'
     }
-
-async def get_widget_data(cookie: str):
-    query = urlparse(WIDGET_URL).query
-    sorted_query = '&'.join(sorted(query.split('&'))) if query else ''
-    headers = mihoyo_headers(cookie=cookie)
-    headers.update({
-        'DS':       get_ds_x6(q=sorted_query)
-    })
-    data = await aiorequests.get(url=WIDGET_URL, headers=headers)
-    data = data.json()
-    return data
 
 async def check_qrcode_status(url: str, ticket: str, auth_cookie:str, referer: str = '') -> bool:
     tickets = {'ticket': ticket, 'token_types': ["4"]}
@@ -189,9 +182,10 @@ async def check_qrcode_status(url: str, ticket: str, auth_cookie:str, referer: s
     except Exception as e:
         return False
 
-def mihoyo_headers(cookie, q='', b=None) -> dict:
+def mihoyo_headers(cookie, q = '', b = None, devices: Optional[Devices] = None) -> dict:
     """
     生成米游社headers
+        :param devices:
         :param cookie: cookie
         :param q: 查询
         :param b: 请求体
@@ -203,10 +197,10 @@ def mihoyo_headers(cookie, q='', b=None) -> dict:
         'Origin':               'https://webstatic.mihoyo.com',
         'x-rpc-page':           'v6.6.1-gr-cn_#/ys',
         'x-rpc-tool_verison':   'v6.6.1-gr-cn',
-        'x-rpc-app_version':    f'{BBS_VERSION}',
-        'x-rpc-device_fp':      '38d81926460a0',
-        'x-rpc-device_name':    'OPPO Find X7',
-        'x-rpc-device_id':      'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
+        'x-rpc-app_version':    BBS_VERSION,
+        'x-rpc-device_fp':      devices.device_fp if devices is not None else '38d81926460a0',
+        'x-rpc-device_name':    devices.device_name if devices is not None else 'OPPO Find X7',
+        'x-rpc-device_id':      devices.device_id if devices is not None else 'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
         'x-rpc-client_type':    '5',
         'x-rpc-sys_version':    '12',
         'X-Requested-With':     'com.mihoyo.hyperion',
@@ -237,7 +231,7 @@ def mihoyo_sign_headers(cookie: str, extra_headers: Optional[dict] = None) -> di
         'x-rpc-client_type':    '2',
         'x-rpc-channel':        'miyousheluodi',
         'x-rpc-csm_source':     'discussion',
-        'x-rpc-app_version':    f'{BBS_VERSION}',
+        'x-rpc-app_version':    BBS_VERSION,
         'x-rpc-sys_version':    '12',
         'Referer':              'https://app.mihoyo.com',
         'Host':                 'bbs-api.miyoushe.com',
@@ -310,15 +304,6 @@ async def check_retcode(data: dict, cookie_info, user_id: str, uid: str) -> bool
             )
         return True
 
-
-async def get_device_id(cookie: str) -> str:
-    """
-    使用 cookie 通过 uuid v3 生成设备 ID。
-    :param cookie: cookie
-    :return: 设备 ID。
-    """
-    return str(uuid.uuid3(uuid.NAMESPACE_URL, cookie))
-
 async def get_device_info(
         user_id: str
 ) -> Union[None, Devices]:
@@ -355,6 +340,65 @@ async def get_cookie(
     else:
         return None
 
+async def get_ext_list():
+    try:
+        req = await aiorequests.get(
+            url = f'{GET_EXT_LIST_URL}?platform=2&app_name=bbs_cn',
+            headers = {
+                'User-Agent':       'okhttp/4.9.3'
+            }
+        )
+        req = req.json()
+        if req['data'] and 'ext_list' in req['data']:
+            ext_list = req['data']['ext_list']
+            if isinstance(ext_list, list):
+                return {item for item in ext_list if isinstance(item, str)}
+    except Exception as ex:
+        return ex
+
+    return {
+        'oaid', 'vaid', 'aaid', 'board', 'brand', 'hardware', 'cpuType', 'deviceType',
+        'display', 'hostname', 'manufacturer', 'productName', 'model', 'deviceInfo',
+        'sdkVersion', 'osVersion', 'devId', 'buildTags', 'buildType', 'buildUser',
+        'buildTime', 'screenSize', 'vendor', 'romCapacity', 'romRemain', 'ramCapacity',
+        'ramRemain', 'appMemory', 'accelerometer', 'gyroscope', 'magnetometer', 'isRoot',
+        'debugStatus', 'proxyStatus', 'emulatorStatus', 'isTablet', 'simState', 'ui_mode',
+        'sdCapacity', 'sdRemain', 'hasKeyboard', 'isMockLocation', 'ringMode', 'isAirMode',
+        'batteryStatus', 'chargeStatus', 'deviceName', 'appInstallTimeDiff',
+        'appUpdateTimeDiff', 'packageName', 'packageVersion', 'networkType'
+    }
+
+async def get_Fp(uid: str):
+    fp = DeviceProvider()
+    default_fp = fp.generate_default_device_id()
+    error_fp = fp.generate_error_device_id()
+    seedId, seedTime = fp.device_seed()
+    variant = fp.select_variant(uid)
+    extList = await get_ext_list()
+    allFields = fp.build_ext_fields(variant)
+    filtered = {k: v for k, v in allFields.items() if k in extList}
+
+    body = json.dumps({
+        'device_id':             str(fp.get_device_id_for_account(uid)),
+        'seed_id':               seedId,
+        'seed_time':             seedTime,
+        'platform':              '2',
+        'device_fp':             default_fp,
+        'app_name':              'bbs_cn',
+        'ext_fields':            json.dumps(filtered),
+        'bbs_device_id':         str(fp.device_id())
+    })
+    req = await aiorequests.post(
+        url = GET_FP_URL,
+        headers = {
+            'User-Agent': 'okhttp/4.9.3'
+        },
+        data = body,
+    )
+    req = req.json()
+    if req['retcode'] == 0:
+        return req['data']['device_fp']
+    return None
 
 async def get_bind_game_info(cookie: str, mys_id: str):
     """
@@ -365,9 +409,9 @@ async def get_bind_game_info(cookie: str, mys_id: str):
     """
     with contextlib.suppress(Exception):
         data = await aiorequests.get(
-            url=GAME_RECORD_API,
-            headers=mihoyo_headers(cookie, f'uid={mys_id}'),
-            params={'uid': mys_id},
+            url = GAME_RECORD_API,
+            headers = mihoyo_headers(cookie, f'uid={mys_id}'),
+            params = {'uid': mys_id},
         )
         data = data.json()
         nb_logger.debug(data)
@@ -386,15 +430,10 @@ async def get_Abyss2_info(
         return '当前没有可使用的cookie，请使用命令[原神扫码绑定]/[ysb]绑定私人cookie或联系超级管理员添加公共cookie，'
     server_id = 'cn_qd01' if uid[0] == '5' else 'cn_gf01'
     headers = mihoyo_headers(
-        q=f'role_id={uid}&need_detail=True&server={server_id}',
-        cookie=cookie_info.cookie,
+        q = f'role_id={uid}&need_detail=True&server={server_id}',
+        cookie = cookie_info.cookie,
+        devices = device_info
     )
-    headers.update({
-        'x-rpc-device_name':        device_info.device_name,
-        'x-rpc-device_fp':          device_info.device_fp,
-        'x-rpc-device_id':          device_info.device_id,
-        'x-rpc-device_model':       device_info.device_model,
-    })
     data: dict = (
         await aiorequests.get(
             url=HARD_CHALLENGE_API,
@@ -422,13 +461,8 @@ async def get_abyss_info(
     headers = mihoyo_headers(
         q = f'role_id={uid}&schedule_type={schedule_type}&server={server_id}',
         cookie = cookie_info.cookie,
+        devices = device_info
     )
-    headers.update({
-        'x-rpc-device_name':        device_info.device_name,
-        'x-rpc-device_fp':          device_info.device_fp,
-        'x-rpc-device_id':          device_info.device_id,
-        'x-rpc-device_model':        device_info.device_model,
-    })
 
     data = await aiorequests.get(
             url = ABYSS_API,
@@ -440,11 +474,17 @@ async def get_abyss_info(
             }
     )
     data = data.json()
-    if data['retcode'] == 1034:
+    if data['retcode'] == 0:
+        logger.info('原神深渊战报', "获取数据成功")
+        return data
+    elif data['retcode'] == data['retcode'] == 5003:
+        logger.warning('原神深渊战报', "账号异常，未能获取数据")
+        return '帐号异常，获取数据失败'
+    elif data['retcode'] == 1034:
         logger.warning('原神深渊战报', '遭遇验证码，正尝试过码')
         for i in range(1, 4):
             logger.info('原神深渊战报', f'触发验证码，即将进行第{i}次重试，最多3次')
-            challenge = await ocr.get_pass_challenge(cookie_info.extra_cookie, 'game')
+            challenge = await ocr.get_pass_challenge(cookie_info.extra_cookie, user_id = user_id, mode = 'game')
             if challenge is not None:
                 headers.update({"x-rpc-challenge": challenge})
                 req = await aiorequests.get(
@@ -466,12 +506,6 @@ async def get_abyss_info(
             else:
                 logger.info('原神深渊战报', '过码失败')
                 return "遇到验证码，但是过码失败"
-    elif data['retcode'] == 0:
-        logger.info('原神深渊战报', "获取数据成功")
-        return data
-    elif data['retcode'] == 5003:
-        logger.warning('原神深渊战报', "账号异常，暂时无法获取数据")
-        return '账号异常，暂时无法获取数据'
     else:
         logger.warning('原神深渊战报', "未知错误")
         return '未知错误'
@@ -489,13 +523,8 @@ async def get_role_combat_info(
     headers = mihoyo_headers(
         q=f'role_id={uid}&need_detail=True&server={server_id}&active=1',
         cookie = cookie_info.cookie,
+        devices = device_info
     )
-    headers.update({
-        'x-rpc-device_name':        device_info.device_name,
-        'x-rpc-device_fp':          device_info.device_fp,
-        'x-rpc-device_id':          device_info.device_id,
-        'x-rpc-device_model':        device_info.device_model,
-    })
     data: dict = (
         await aiorequests.get(
             url = ROLE_COMBAT_API,
@@ -524,25 +553,29 @@ async def get_mihoyo_public_data(
     if not cookie_info:
          return '当前没有可使用的cookie，请使用命令[原神扫码绑定]/[ysb]绑定私人cookie或联系超级管理员添加公共cookie，'
     elif mode == 'player_card':
-        headers = mihoyo_headers(q = f'role_id={uid}&server={server_id}&avatar_list_type=1', cookie = cookie_info.cookie)
+        headers = mihoyo_headers(
+            q = f'role_id={uid}&server={server_id}&avatar_list_type=1',
+            cookie = cookie_info.cookie,
+            devices = device_info
+        )
         ds = get_ds_x4(q = f'role_id={uid}&server={server_id}&avatar_list_type=1')
-
-        headers.update({
-            'x-rpc-device_name':        device_info.device_name,
-            'x-rpc-device_fp':          device_info.device_fp,
-            'x-rpc-device_id':          device_info.device_id,
-            'x-rpc-device_model':       device_info.device_model,
-        })
         data = await aiorequests.get(
             url = PLAYER_CARD_API,
             headers = headers,
             params = {'server': server_id, 'role_id': uid, 'avatar_list_type': '1'},
         )
         data = data.json()
-        if data['retcode'] == 1034:
+        if data['retcode'] == 0:
+            logger.info('原神信息查询', "获取数据成功")
+            if await check_retcode(data, cookie_info, user_id, uid):
+                return data
+        elif data['retcode'] == 5003:
+            logger.warning('原神信息查询', "获取数据失败")
+            return '账号异常，获取数据失败'
+        elif data['retcode'] == 1034:
             for i in range(1, 3):
                 logger.info('原神信息查询', f'➤ 触发验证码，即将进行第{i}次重试，最多3次')
-                challenge = await ocr.get_pass_challenge(cookie_info.extra_cookie, 'game')
+                challenge = await ocr.get_pass_challenge(cookie_info.extra_cookie, user_id,'game')
                 if challenge is not None:
                     headers.update({
                         'DS':                   ds,
@@ -563,13 +596,6 @@ async def get_mihoyo_public_data(
                 else:
                     logger.info('原神信息查询', '过码失败')
                     return "遇到验证码，但是过码失败"
-
-        elif data['retcode'] == 0:
-            logger.info('原神信息查询', "获取数据成功")
-            if await check_retcode(data, cookie_info, user_id, uid):
-                return data
-        elif data['retcode'] == 5003:
-            return '帐号异常，暂时无法获取数据'
         else:
             return '未知错误'
     elif mode == 'role_detail':
@@ -631,51 +657,17 @@ async def get_mihoyo_private_data(
             },
         )
     elif mode == 'daily_note':
-        ocr = rrocr(user_id)
         headers = mihoyo_headers(
-            q=f'role_id={uid}&server={server_id}', cookie=cookie_info.extra_cookie
+            q=f'role_id={uid}&server={server_id}', cookie=cookie_info.stoken
         )
-        ds = get_ds_x4(q = f'role_id={uid}&server={server_id}')
         data = await aiorequests.get(
-            url = DAILY_NOTE_API,
+            url = WIDGET_URL,
             headers = headers,
             params = {
                 "server":   server_id,
                 "role_id":  uid
             },
         )
-        data = data.json()
-        if data['retcode'] == 0:
-            if await check_retcode(data, cookie_info, user_id, uid):
-                return data
-        elif data['retcode'] == 5003:
-            result = await get_widget_data(cookie=cookie_info.extra_cookie)
-            print(result)
-        elif data['retcode'] == 1034:
-            challenge = ocr.get_pass_challenge(cookie_info=cookie_info.extra_cookie, mode='game')
-            if challenge is not None:
-                headers.update({
-                    'DS':                   ds,
-                    "x-rpc-challenge":      challenge,
-                })
-                req = await aiorequests.get(
-                    url = DAILY_NOTE_API,
-                    headers = headers,
-                    params = {
-                        "server":   server_id,
-                        "role_id":  uid
-                    },
-                )
-                req = req.json()
-                if req['retcode'] == 0:
-                    logger.success('原神实时便笺', '打码成功，获取数据成功')
-                    return req
-                elif req['retcode'] == 1034:
-                    logger.warning('原神实时便笺', '打码失败，获取数据失败')
-                    return req
-        else:
-            logger.warning('原神实时便笺', '未知错误')
-            return '未知错误'
     elif mode == 'sign_info':
         data = await aiorequests.get(
             url=SIGN_INFO_API,
@@ -694,7 +686,6 @@ async def get_mihoyo_private_data(
                 'uid':          uid
             },
         )
-        data = data.json()
     elif mode == 'sign_action':
         data = await aiorequests.post(
             url = SIGN_ACTION_API,
@@ -705,10 +696,10 @@ async def get_mihoyo_private_data(
                 'region':       server_id
             },
         )
-        data = data.json()
-
     else:
         data = None
+    data = data.json() if data else {'retcode': 999}
+    nb_logger.debug(data)
     if await check_retcode(data, cookie_info, user_id, uid):
         return data
     else:
@@ -717,7 +708,7 @@ async def get_mihoyo_private_data(
 
 async def get_sign_reward_list() -> dict:
     headers = {
-        'x-rpc-app_version':        '2.99.1',
+        'x-rpc-app_version':        BBS_VERSION,
         'x-rpc-signgame':           'hk4e',
         'User-Agent':               'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) miHoYoBBS/2.99.1',
         'Referer':                  'https://act.mihoyo.com/'
@@ -739,7 +730,7 @@ async def get_stoken_by_login_ticket(login_ticket: str, mys_id: str) -> Optional
         data = await aiorequests.get(
             STOKEN_API,
             headers={
-                'x-rpc-app_version':    '2.99.1',
+                'x-rpc-app_version':    BBS_VERSION,
                 'User-Agent':           'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) miHoYoBBS/2.60.1',
                 'x-rpc-client_type':    '5',
                 'Referer':              'https://webstatic.mihoyo.com/',
@@ -761,7 +752,7 @@ async def get_cookie_token_by_stoken(stoken: str, mys_id: str) -> Optional[str]:
         data = await aiorequests.get(
             COOKIE_TOKEN_API,
             headers = {
-                'x-rpc-app_version':        '2.99.1',
+                'x-rpc-app_version':        BBS_VERSION,
                 'User-Agent':               'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) miHoYoBBS/2.60.1',
                 'x-rpc-client_type':        '5',
                 'Referer':                  'https://webstatic.mihoyo.com/',
@@ -790,6 +781,7 @@ async def get_authkey_by_stoken(
     """
     server_id = 'cn_qd01' if uid[0] == '5' else 'cn_gf01'
     cookie_info = await get_cookie(user_id, uid, True, True)
+    device_info = await get_device_info(user_id)
     if not cookie_info:
         return (
             '未绑定私人cookie，绑定方法二选一：\n1.通过米游社扫码绑定：\n请发送指令[原神扫码绑定]\n2.获取cookie的教程：\ndocs.qq.com/doc/DQ3JLWk1vQVllZ2Z1\n获取后，使用[ysb cookie]指令绑定'
@@ -801,27 +793,27 @@ async def get_authkey_by_stoken(
         return 'cookie中没有stoken字段，请重新绑定', False, cookie_info
 
     headers = {
-        "Cookie": cookie_info.stoken,
-        "DS": get_old_version_ds(True),
-        "User-Agent": "okhttp/4.8.0",
-        "x-rpc-app_version": "2.99.1",
-        "x-rpc-sys_version": "12",
-        "x-rpc-client_type": "5",
-        "x-rpc-channel": "mihoyo",
-        "x-rpc-device_id": random_hex(32),
-        "x-rpc-device_name": random_text(random.randint(1, 10)),
-        "x-rpc-device_model": "Mi 10",
-        "Referer": "https://app.mihoyo.com",
-        "Host": "api-takumi.mihoyo.com",
+        "Cookie":                       cookie_info.stoken,
+        "DS":                           get_old_version_ds(True),
+        "User-Agent":                   "okhttp/4.8.0",
+        "x-rpc-app_version":            BBS_VERSION,
+        "x-rpc-sys_version":            "12",
+        "x-rpc-client_type":            "5",
+        "x-rpc-channel":                "mihoyo",
+        "x-rpc-device_id":              device_info.device_id,
+        "x-rpc-device_name":            device_info.device_name,
+        "x-rpc-device_model":           device_info.device_modele,
+        "Referer":                      "https://app.mihoyo.com",
+        "Host":                         "api-takumi.mihoyo.com",
     }
     data = await aiorequests.post(
         url = AUTHKEY_API,
         headers = headers,
         json = {
-            'auth_appid': 'webview_gacha',
-            'game_biz': 'hk4e_cn',
-            'game_uid': uid,
-            'region': server_id,
+            'auth_appid':       'webview_gacha',
+            'game_biz':         'hk4e_cn',
+            'game_uid':         uid,
+            'region':           server_id,
         },
     )
     data = data.json()
