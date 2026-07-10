@@ -304,14 +304,11 @@ async def check_retcode(data: dict, cookie_info, user_id: str, uid: str) -> bool
             )
         return True
 
-async def get_device_info(
-        user_id: str
-) -> Union[None, Devices]:
+async def get_device_info(user_id: str) -> Union[None, Devices]:
     if device_info := await Devices.filter(Q(user_id=user_id)).first():
         return device_info
     else:
         return None
-
 
 async def get_cookie(
         user_id: str, uid: str, check: bool = True, own: bool = False
@@ -802,7 +799,7 @@ async def get_authkey_by_stoken(
         "x-rpc-channel":                "mihoyo",
         "x-rpc-device_id":              device_info.device_id,
         "x-rpc-device_name":            device_info.device_name,
-        "x-rpc-device_model":           device_info.device_modele,
+        "x-rpc-device_model":           device_info.device_model,
         "Referer":                      "https://app.mihoyo.com",
         "Host":                         "api-takumi.mihoyo.com",
     }

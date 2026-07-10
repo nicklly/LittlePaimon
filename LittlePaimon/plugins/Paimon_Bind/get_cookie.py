@@ -234,7 +234,7 @@ async def check_qrcode():
                                 user_id = user_id,
                                 uid = info['uid'],
                                 device_id = devices.device_id(),
-                                device_name = devices.select_variant(info['uid']).ProductName,
+                                device_name = devices.select_variant(info['uid']).DeviceName,
                                 device_model = devices.select_variant(info['uid']).DeviceModel,
                                 device_fp = fingerprint,
                             )

@@ -227,7 +227,7 @@ class rrocr:
 
     async def get_pass_challenge(self, cookie_info, user_id: str, mode: Optional[str] = 'bbs'):
         """
-        :param ds:
+        :param user_id: 用户ID
         :param cookie_info: cookie信息
         :param mode: 验证类型
         :return:
@@ -235,9 +235,9 @@ class rrocr:
         from LittlePaimon.utils.api import get_device_info
         devices = await get_device_info(user_id)
         headers = (
-            record_captcha(get_ds_x4('is_high=true', ''), cookie_info, devices = devices)
+            record_captcha(get_ds_x4('is_high=true', None), cookie_info, devices = devices)
             if mode == 'game' else
-            bbs_captcha(cookie_info, devices =  devices)
+            bbs_captcha(cookie_info, devices = devices)
         )
         req = await aiorequests.get(
             url = RECORD_CAPTCHA if mode == 'game' else BBS_CAPTCHA,

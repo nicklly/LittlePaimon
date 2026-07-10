@@ -220,10 +220,9 @@ class MihoyoBBSCoin:
             data = req.json()
             if data['retcode'] == 1034:
                 logger.warning('米游币自动获取', '➤➤ 遭遇验证码，正尝试过码')
-                challenge = None
                 for retry_count in range(1, 3):
                     logger.info('米游币自动获取', f'➤➤ 即将进行第{retry_count}次重试，最多2次')
-                    challenge = await self.geetest.get_pass_challenge(self.cookies, user_id = self.user_id, mode = 'bbs')
+                    challenge: str = await self.geetest.get_pass_challenge(self.cookies, user_id = self.user_id, mode = 'bbs')
                     if challenge is not None:
                         self.headers.update({'x-rpc-challenge':  challenge})
                         result = await aiorequests.post(url = bbs_Signurl, headers = self.headers, data = body) # type: ignore
@@ -240,8 +239,6 @@ class MihoyoBBSCoin:
                         logger.info('米游币自动获取', '➤➤ 过码失败')
                     if retry_count == 2:
                         break
-                if challenge is not None:
-                    self.headers.pop("x-rpc-challenge")
             elif data['retcode'] == 0:
                 self.state = '签到完成！'
                 logger.info('米游币自动获取', '➤➤ 讨论区签到<g>完成</g>')

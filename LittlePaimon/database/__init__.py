@@ -33,7 +33,7 @@ DATABASE = {
             'models':             [
                 player_info.__name__,
                 abyss_info.__name__,
-                abyss2_info.__name__,
+                hard_challenge.__name__,
                 role_combat.__name__,
                 character.__name__,
                 cookie.__name__,
