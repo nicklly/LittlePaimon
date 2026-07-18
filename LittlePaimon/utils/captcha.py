@@ -1,11 +1,7 @@
 import asyncio
-import string
-import hashlib
-import time
 import random
-import json
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 from LittlePaimon.database import Devices
 from LittlePaimon.utils.files import load_yaml
@@ -20,47 +16,6 @@ BBS_CAPTCHA = 'https://bbs-api.miyoushe.com/misc/api/createVerification?is_high=
 BBS_CAPTCHA_VERIFY = 'https://bbs-api.miyoushe.com/misc/api/verifyVerification'
 
 rr = load_yaml(Path() / 'config' / 'rrocr.yml')
-
-def md5(text: str) -> str:
-    """
-    md5加密
-    :param text: 文本
-    :return: md5加密后的文本
-    """
-    md5_ = hashlib.md5()
-    md5_.update(text.encode())
-    return md5_.hexdigest()
-
-def get_ds_x4(q: str = '', b: dict = None) -> str:
-    """
-    生成米游社headers的ds_token
-    :param q: 查询
-    :param b: 请求体
-    :return: ds_token
-    """
-    br = json.dumps(b) if b else ''
-
-    t = str(int(time.time()))
-    r = str(random.randint(100000, 200000))
-    c = md5(f'salt=xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs&t={t}&r={r}&b={br}&q={q}')
-    return f'{t},{r},{c}'
-
-
-def get_old_version_ds(web: bool = False) -> str:
-    """
-    生成米游社旧版本headers的ds_token
-    """
-    if web:
-        # s = 'G1ktdwFL4IyGkHuuWSmz0wUe9Db9scyK'.
-        s = 'd9200c846b10886e8c874fc33c8f308b'
-    else:
-        # s = 'idMMaGYmVgPzh3wxmWudUXKUPGidO7GM'
-        s = '47f15f1b66bee46b816115d8e8e6ebb6'
-    t = str(int(time.time()))
-    r = ''.join(random.sample(string.ascii_lowercase + string.digits, 6))
-    c = md5(f"salt={s}&t={t}&r={r}")
-    return f"{t},{r},{c}"
-
 
 def record_captcha(ds: str, cookie_info: str, devices: Devices) -> dict:
     return {
@@ -77,6 +32,7 @@ def record_captcha(ds: str, cookie_info: str, devices: Devices) -> dict:
     }
 
 def bbs_captcha(cookie_info: str, devices: Devices) -> dict:
+    from LittlePaimon.utils.api import get_old_version_ds
     return {
         'DS':                                   get_old_version_ds(web=False),
         'cookie':                               cookie_info,
@@ -232,7 +188,7 @@ class rrocr:
         :param mode: 验证类型
         :return:
         """
-        from LittlePaimon.utils.api import get_device_info
+        from LittlePaimon.utils.api import get_device_info, get_ds_x4
         devices = await get_device_info(user_id)
         headers = (
             record_captcha(get_ds_x4('is_high=true', None), cookie_info, devices = devices)

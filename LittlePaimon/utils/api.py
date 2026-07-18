@@ -3,9 +3,9 @@ import hashlib
 import json
 import random
 import string
-import uuid
+import asyncio
 import time
-from urllib.parse import urlparse
+
 from typing import Optional, Literal, Union, Tuple
 from nonebot import logger as nb_logger
 from tortoise.queryset import Q
@@ -127,8 +127,10 @@ def get_old_version_ds(web: bool = False) -> str:
     c = md5(f"salt={s}&t={t}&r={r}")
     return f"{t},{r},{c}"
 
-def qrcode_permission_headers(cookies: Optional[str]):
-    return {
+def qrcode_permission_headers(cookies: Optional[str], user_id: Optional[str]):
+
+    devices = asyncio.run(get_device_info(user_id))
+    headers = {
         'DS':                   get_old_version_ds(web=False),
         'cookie':               cookies,
         'x-rpc-client_type':    '2',
@@ -145,6 +147,13 @@ def qrcode_permission_headers(cookies: Optional[str]):
         'Host':                 'bbs-api.miyoushe.com',
         'user-agent':           'okhttp/4.9.3'
     }
+    if user_id is not None:
+        headers.update({
+            'x-rpc-device_id':      devices.device_id ,
+            'x-rpc-device_name':    devices.device_name,
+            'x-rpc-device_model':   devices.device_model
+        })
+    return headers
 
 def login_permission_headers(ticket: Optional[dict] = None, auth_cookie: Optional[str] = '', referer: Optional[str] = '') -> dict:
     return {
@@ -191,16 +200,16 @@ def mihoyo_headers(cookie, q = '', b = None, devices: Optional[Devices] = None) 
         :param b: 请求体
         :return: headers
     """
-    return {
+    headers = {
         'Host':                 'api-takumi-record.mihoyo.com',
         'Accept':               'application/json, text/plain, */*',
         'Origin':               'https://webstatic.mihoyo.com',
         'x-rpc-page':           'v6.6.1-gr-cn_#/ys',
         'x-rpc-tool_verison':   'v6.6.1-gr-cn',
         'x-rpc-app_version':    BBS_VERSION,
-        'x-rpc-device_fp':      devices.device_fp if devices is not None else '38d81926460a0',
-        'x-rpc-device_name':    devices.device_name if devices is not None else 'OPPO Find X7',
-        'x-rpc-device_id':      devices.device_id if devices is not None else 'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
+        'x-rpc-device_fp':      '38d81926460a0',
+        'x-rpc-device_name':    'OPPO Find X7',
+        'x-rpc-device_id':      'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
         'x-rpc-client_type':    '5',
         'x-rpc-sys_version':    '12',
         'X-Requested-With':     'com.mihoyo.hyperion',
@@ -210,6 +219,13 @@ def mihoyo_headers(cookie, q = '', b = None, devices: Optional[Devices] = None) 
         'Cookie':               cookie,
         'DS':                   get_ds_x4(q, b),
     }
+    if devices is not None:
+        headers.update({
+            'x-rpc-device_fp':      devices.device_fp,
+            'x-rpc-device_name':    devices.device_name,
+            'x-rpc-device_id':      devices.device_id
+        })
+    return headers
 
 
 def mihoyo_sign_headers(cookie: str, extra_headers: Optional[dict] = None) -> dict:

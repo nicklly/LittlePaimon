@@ -13,7 +13,7 @@ from LittlePaimon.database import PrivateCookie, MihoyoBBSSub, LastQuery
 from LittlePaimon.utils import logger, scheduler
 from LittlePaimon.utils.captcha import rrocr
 from LittlePaimon.utils.requests import aiorequests
-from LittlePaimon.utils.api import get_ds_x6, qrcode_permission_headers, get_device_info
+from LittlePaimon.utils.api import get_ds_x6, qrcode_permission_headers
 
 # 米游社的API列表
 bbs_Cookieurl = 'https://webapi.account.mihoyo.com/Api/cookie_accountinfo_by_loginticket?login_ticket={}'
@@ -78,6 +78,10 @@ mihoyo_bbs_List = [
 class MihoyoBBSCoin:
     """
     米游币获取
+    :param cookies: 帐号cookie
+    :param extra_cookie: 额外cookie
+    :param uid: 游戏uid
+    :param user_id: 用户uid（非游戏uid）
     """
 
     def __init__(self, cookies, extra_cookie, uid, user_id):
@@ -85,7 +89,7 @@ class MihoyoBBSCoin:
         self.extra_cookie = extra_cookie
         self.uid = uid
         self.user_id = user_id
-        self.headers = qrcode_permission_headers(cookies)
+        self.headers = qrcode_permission_headers(cookies, user_id)
         self.geetest = rrocr()
         self.postsList: list = []
         self.Task_do: dict = {
@@ -213,7 +217,6 @@ class MihoyoBBSCoin:
             gids = {'gids': i['id']}
             ds = get_ds_x6('', gids) # type: ignore
             body = json.dumps(gids)
-            # devices = await get_device_info(self.user_id)
             self.headers.update({'DS': ds})
 
             req = await aiorequests.post(url = bbs_Signurl, headers = self.headers, data = body) # type: ignore
