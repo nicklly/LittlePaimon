@@ -737,7 +737,19 @@
     "1333": "不叹日落，不羡月升",
     "1334": "世事皆数，昼来夜往",
     "1335": "万象皆灰，唯理明畅",
-    "1336": "水仙梦醒，且望晨光"
+    "1336": "水仙梦醒，且望晨光",
+    "1481": "寒谷轰雷",
+    "1482": "长嗥远讯",
+    "1483": "僚朋相唤",
+    "1484": "衔取猎品",
+    "1485": "莺啼止时",
+    "1486": "复夺旌幡",
+    "1501": "「不曾起舞的清晨，她望向倒影」",
+    "1502": "「她想，我要见证雪鹄未见之梦」",
+    "1503": "「我要追逐呼啸的风，向上独行」",
+    "1504": "「向上，坠往恍惚、燃烧的蓝空」",
+    "1505": "「看呀，我已告别尘与土的苦痛」",
+    "1506": "「伸出手，触及苍穹永恒的面容」"
   },
   "Icon": {
     "21": "UI_Talent_S_Ayaka_01",
@@ -1477,6 +1489,18 @@
     "1333": "UI_Talent_U_MarionetteNew_01",
     "1334": "UI_Talent_S_MarionetteNew_03",
     "1335": "UI_Talent_U_MarionetteNew_02",
-    "1336": "UI_Talent_S_MarionetteNew_04"
+    "1336": "UI_Talent_S_MarionetteNew_04",
+    "1481": "UI_Talent_S_Alyosha_01",
+    "1482": "UI_Talent_S_Alyosha_02",
+    "1483": "UI_Talent_U_Alyosha_01",
+    "1484": "UI_Talent_S_Alyosha_03",
+    "1485": "UI_Talent_U_Alyosha_02",
+    "1486": "UI_Talent_S_Alyosha_04",
+    "1501": "UI_Talent_S_Odette_01",
+    "1502": "UI_Talent_S_Odette_02",
+    "1503": "UI_Talent_U_Odette_01",
+    "1504": "UI_Talent_S_Odette_03",
+    "1505": "UI_Talent_U_Odette_02",
+    "1506": "UI_Talent_S_Odette_04"
   }
 }

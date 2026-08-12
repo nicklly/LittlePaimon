@@ -490,7 +490,7 @@ async def get_abyss_info(
     if data['retcode'] == 0:
         logger.info('原神深渊战报', "获取数据成功")
         return data
-    elif data['retcode'] == data['retcode'] == 5003:
+    elif data['retcode'] == 5003:
         logger.warning('原神深渊战报', "账号异常，未能获取数据")
         return '帐号异常，获取数据失败'
     elif data['retcode'] == 1034:

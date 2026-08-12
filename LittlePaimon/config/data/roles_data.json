@@ -32078,5 +32078,18 @@
     "element": "冰",
     "skill": {},
     "attribute": {}
-  }
+  },
+  "阿罗夏": {
+    "region": "至冬",
+    "star": 4,
+    "element": "雷",
+    "skill": {},
+    "attribute": {}
+  },
+  "奥黛塔": {
+    "region": "至冬",
+    "star": 5,
+    "element": "冰",
+    "skill": {},
+    "attribute": {}}
 }
