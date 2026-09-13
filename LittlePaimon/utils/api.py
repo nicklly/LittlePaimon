@@ -578,9 +578,8 @@ async def get_mihoyo_public_data(
             params = {'server': server_id, 'role_id': uid, 'avatar_list_type': '1'},
         )
         data = data.json()
-        if data['retcode'] == 0:
-            logger.info('原神信息查询', "获取数据成功")
-            if await check_retcode(data, cookie_info, user_id, uid):
+        if await check_retcode(data, cookie_info, user_id, uid):
+                logger.info('原神信息查询', "获取数据成功")
                 return data
         elif data['retcode'] == 5003:
             logger.warning('原神信息查询', "获取数据失败")
@@ -609,8 +608,6 @@ async def get_mihoyo_public_data(
                 else:
                     logger.info('原神信息查询', '过码失败')
                     return "遇到验证码，但是过码失败"
-        else:
-            return '未知错误'
     elif mode == 'role_detail':
         json_data = {"server": server_id, "role_id": uid, "character_ids": []}
         data = await aiorequests.post(

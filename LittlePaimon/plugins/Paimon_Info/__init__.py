@@ -280,8 +280,7 @@ async def _(
     logger.info('原神角色面板', '开始执行')
     msg = Message()
     try:
-        characters = [char for char in characters
-                               if "奇偶·女性" not in char and "奇偶·男性" not in char]
+        characters = [char for char in characters if "奇偶·女性" not in char and "奇偶·男性" not in char]
         if not characters:
             return
 
