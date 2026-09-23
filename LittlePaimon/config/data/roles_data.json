@@ -32091,5 +32091,20 @@
     "star": 5,
     "element": "冰",
     "skill": {},
-    "attribute": {}}
+    "attribute": {}
+  },
+  "沃雅妮莎": {
+    "region": "至冬",
+    "star": 5,
+    "element": "水",
+    "skill": {},
+    "attribute": {}
+  },
+  "薇斯纳": {
+    "region": "至冬",
+    "star": 5,
+    "element": "风",
+    "skill": {},
+    "attribute": {}
+  }
 }

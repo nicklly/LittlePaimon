@@ -487,7 +487,7 @@ async def get_abyss_info(
             }
     )
     data = data.json()
-    if data['retcode'] == 0:
+    if await check_retcode(data, cookie_info, user_id, uid):
         logger.info('原神深渊战报', "获取数据成功")
         return data
     elif data['retcode'] == 5003:
@@ -519,9 +519,6 @@ async def get_abyss_info(
             else:
                 logger.info('原神深渊战报', '过码失败')
                 return "遇到验证码，但是过码失败"
-    else:
-        logger.warning('原神深渊战报', "未知错误")
-        return '未知错误'
     return data['message']
 
 async def get_role_combat_info(
