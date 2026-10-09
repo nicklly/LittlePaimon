@@ -138,7 +138,8 @@ DEVICE_VARIANTS = [
         DeviceInfo='Huawei/ALN-AL80/HWALN:12/HarmonyOS3.0/103.0.0.168:user/release-keys',
         OsVersion='12', SdkVersion='31', BuildId='103.0.0.168',
         BuildDisplay='103.0.0.168 release-keys', BuildTime=1692000000000, Hostname='cn-sz-huawei-01'
-    ),ceVariant(
+    ),
+    DeviceVariant(
         DeviceModel='LIO-AL00', DeviceName='Huawei Mate 30 Pro', ProductName='lion',
         Brand='Huawei', Board='LIO-AL00', Hardware='kirin990', DeviceType='HWLIO',
         Manufacturer='Huawei',
