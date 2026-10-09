@@ -9,11 +9,11 @@ from typing import Tuple
 from nonebot import get_bot
 
 from LittlePaimon.config import config
-from LittlePaimon.database import PrivateCookie, MihoyoBBSSub, LastQuery
+from LittlePaimon.database import PrivateCookie, MihoyoBBSSub, LastQuery, Devices
 from LittlePaimon.utils import logger, scheduler
 from LittlePaimon.utils.captcha import rrocr
 from LittlePaimon.utils.requests import aiorequests
-from LittlePaimon.utils.api import get_ds_x6, qrcode_permission_headers
+from LittlePaimon.utils.api import get_ds_x6, qrcode_permission_headers, get_device_info
 
 # 米游社的API列表
 bbs_Cookieurl = 'https://webapi.account.mihoyo.com/Api/cookie_accountinfo_by_loginticket?login_ticket={}'
@@ -82,14 +82,15 @@ class MihoyoBBSCoin:
     :param extra_cookie: 额外cookie
     :param uid: 游戏uid
     :param user_id: 用户uid（非游戏uid）
+    :param devices: 用户设备信息
     """
 
-    def __init__(self, cookies, extra_cookie, uid, user_id):
+    def __init__(self, cookies, extra_cookie, uid, user_id, devices: Devices):
         self.cookies = cookies
         self.extra_cookie = extra_cookie
         self.uid = uid
         self.user_id = user_id
-        self.headers = qrcode_permission_headers(cookies, user_id)
+        self.headers = qrcode_permission_headers(cookies, devices)
         self.geetest = rrocr()
         self.postsList: list = []
         self.Task_do: dict = {
@@ -140,7 +141,7 @@ class MihoyoBBSCoin:
             'user-agent':       'Mozilla/5.0 (Linux; Android 12; Unspecified Device) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36 miHoYoBBS/2.99.1"',
             'Cookie':           self.extra_cookie
         }
-        data = await aiorequests.get(url=bbs_Taskslist, headers=headers)
+        data = await aiorequests.get(url = bbs_Taskslist, headers = headers)
         data = data.json()
 
         if data['retcode'] != 0:
@@ -217,9 +218,10 @@ class MihoyoBBSCoin:
             gids = {'gids': i['id']}
             ds = get_ds_x6('', gids) # type: ignore
             body = json.dumps(gids)
-            self.headers.update({'DS': ds})
+            headers = self.headers
+            headers.update({'DS': ds})
 
-            req = await aiorequests.post(url = bbs_Signurl, headers = self.headers, data = body) # type: ignore
+            req = await aiorequests.post(url = bbs_Signurl, headers = headers, data = body) # type: ignore
             data = req.json()
             if data['retcode'] == 1034:
                 logger.warning('米游币自动获取', '➤➤ 遭遇验证码，正尝试过码')
@@ -227,8 +229,8 @@ class MihoyoBBSCoin:
                     logger.info('米游币自动获取', f'➤➤ 即将进行第{retry_count}次重试，最多2次')
                     challenge: str = await self.geetest.get_pass_challenge(self.cookies, user_id = self.user_id, mode = 'bbs')
                     if challenge is not None:
-                        self.headers.update({'x-rpc-challenge':  challenge})
-                        result = await aiorequests.post(url = bbs_Signurl, headers = self.headers, data = body) # type: ignore
+                        headers.update({'x-rpc-challenge':  challenge})
+                        result = await aiorequests.post(url = bbs_Signurl, headers = headers, data = body) # type: ignore
                         result = result.json()
                         if result['retcode'] == 0:
                             self.state = '签到完成！'
@@ -305,7 +307,7 @@ class MihoyoBBSCoin:
             await asyncio.sleep(random.randint(3, 6))
             req = await aiorequests.post(
                 url = bbs_Likeurl,
-                headers = self.headers,
+                headers = self.headers ,
                 json = {
                     'post_id':      self.postsList[i][0],
                     'game_uid':     self.uid,
@@ -362,7 +364,8 @@ async def mhy_bbs_coin(user_id: str, uid: str) -> str:
         'last_time':        datetime.datetime.now()
     })
     logger.info('米游币自动获取', '➤➤ 执行', {'用户': user_id, 'UID': uid, '的米游币获取': '......'})
-    get_coin_task = MihoyoBBSCoin(cookie.stoken, cookie.extra_cookie, uid, user_id)
+    devices = await get_device_info(user_id)
+    get_coin_task = MihoyoBBSCoin(cookie.stoken, cookie.extra_cookie, uid, user_id, devices)
     result, msg = await get_coin_task.run()
     return msg if result else f'UID{uid}{msg}'
 

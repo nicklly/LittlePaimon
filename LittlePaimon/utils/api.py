@@ -127,9 +127,8 @@ def get_old_version_ds(web: bool = False) -> str:
     c = md5(f"salt={s}&t={t}&r={r}")
     return f"{t},{r},{c}"
 
-def qrcode_permission_headers(cookies: Optional[str], user_id: Optional[str]):
+def qrcode_permission_headers(cookies: Optional[str], devices: Devices):
 
-    devices = asyncio.run(get_device_info(user_id))
     headers = {
         'DS':                   get_old_version_ds(web=False),
         'cookie':               cookies,
@@ -147,9 +146,9 @@ def qrcode_permission_headers(cookies: Optional[str], user_id: Optional[str]):
         'Host':                 'bbs-api.miyoushe.com',
         'user-agent':           'okhttp/4.9.3'
     }
-    if user_id is not None:
+    if devices is not None:
         headers.update({
-            'x-rpc-device_id':      devices.device_id ,
+            'x-rpc-device_id':      devices.device_id,
             'x-rpc-device_name':    devices.device_name,
             'x-rpc-device_model':   devices.device_model
         })
@@ -320,7 +319,7 @@ async def check_retcode(data: dict, cookie_info, user_id: str, uid: str) -> bool
             )
         return True
 
-async def get_device_info(user_id: str) -> Union[None, Devices]:
+async def get_device_info(user_id: str | int) -> Devices | None:
     if device_info := await Devices.filter(Q(user_id=user_id)).first():
         return device_info
     else:
