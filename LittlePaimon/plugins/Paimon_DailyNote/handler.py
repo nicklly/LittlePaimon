@@ -13,7 +13,7 @@ from LittlePaimon.config import config
 from LittlePaimon.database import DailyNoteSub, Player, LastQuery
 from LittlePaimon.utils import logger, scheduler
 from LittlePaimon.utils.api import get_mihoyo_private_data
-from .draws import draw_daily_note_card
+from .draw import draw_daily_note_card
 
 
 def SubList() -> dict:
