@@ -101,7 +101,7 @@ class FloorInfo(BaseModel):
     """楼层数"""
     battles_team: Optional[List[RoleCombat_Infos]]
     """出战阵容"""
-    battles_buff: Optional[List[Buffs_Info]]
+    battles_buff: Optional[List[BuffsInfos]] = None
     """战斗buff"""
 
 class Floors(BaseModel):

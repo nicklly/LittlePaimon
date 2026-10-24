@@ -7,6 +7,7 @@ from LittlePaimon.utils.image import font_manager as fm
 from LittlePaimon.utils.image import load_image
 from LittlePaimon.utils.message import MessageBuild
 from LittlePaimon.utils.path import RESOURCE_BASE_PATH
+from LittlePaimon.utils.requests import aiorequests
 
 
 nomedal = RESOURCE_BASE_PATH / 'role_combat' / 'nomedal.png'
@@ -52,6 +53,13 @@ PANEL_LEFT = 30
 PANEL_WIDTH = 1020
 TITLE_TO_CARDS = 12
 
+# 祝福（buff）区域：放在每幕最后一张角色卡右边
+BUFF_COLUMNS = 2
+BUFF_CELL_WIDTH = 176
+BUFF_CELL_HEIGHT = 56
+BUFF_ICON_SIZE = 40
+BUFF_LEFT = 40 + 4 * (CARD_WIDTH + CARD_GAP) - CARD_GAP + 20
+
 
 async def draw_chara_card(chara) -> PMImage:
     """绘制单个角色卡：星章底框 + 头像 + 元素图标 + 试用标签 + 等级"""
@@ -86,8 +94,17 @@ async def draw_chara_card(chara) -> PMImage:
     return card
 
 
+def flatten_buffs(floor) -> list:
+    """把一幕的祝福铺平成一个列表"""
+    buffs = []
+    for group in getattr(floor, 'battles_buff', None) or []:
+        members = getattr(group, 'BuffsInfos', None)
+        buffs.extend([buff for buff in (members if members is not None else [group]) if buff])
+    return [buff for buff in buffs if buff.buff_name or buff.buff_icon]
+
+
 def collect_team_floors(info) -> list:
-    """把 teams 整理成 [(幕序号, [队伍成员列表, ...]), ...]"""
+    """把 teams 整理成 [(幕序号, [队伍成员列表, ...], [祝福, ...]), ...]"""
     teams = getattr(info, 'teams', None)
     if not teams:
         return []
@@ -103,23 +120,69 @@ def collect_team_floors(info) -> list:
             if members:
                 floor_teams.append(members)
         if floor_teams:
-            result.append((index, floor_teams))
+            result.append((index, floor_teams, flatten_buffs(floor)))
     return result
 
 
-def floor_panel_height(floor_teams: list) -> int:
-    """单幕边框的高度"""
+def floor_panel_height(floor_teams: list, buff_count: int = 0) -> int:
+    """单幕边框的高度（角色卡与祝福取较高的一侧）"""
     rows = len(floor_teams)
+    cards_height = rows * CARD_HEIGHT + (rows - 1) * TEAM_GAP
+    buff_height = -(-buff_count // BUFF_COLUMNS) * BUFF_CELL_HEIGHT
     return (PANEL_PAD * 2 + FLOOR_TITLE_HEIGHT + TITLE_TO_CARDS
-            + rows * CARD_HEIGHT + (rows - 1) * TEAM_GAP)
+            + max(cards_height, buff_height))
 
 
 def team_section_height(floors: list) -> int:
     """演出详情区总高度"""
     height = SECTION_TITLE_HEIGHT
-    for _, floor_teams in floors:
-        height += floor_panel_height(floor_teams) + PANEL_GAP
+    for _, floor_teams, buffs in floors:
+        height += floor_panel_height(floor_teams, len(buffs)) + PANEL_GAP
     return height
+
+
+buff_icon_cache = {}
+
+
+async def load_buff_icon(buff):
+    """祝福图标：是超链接就直接下载，否则当作本地图标名"""
+    icon = buff.buff_icon
+    if not icon:
+        return None
+    if icon in buff_icon_cache:
+        cached = buff_icon_cache[icon]
+        return cached.copy() if cached else None
+    try:
+        if str(icon).startswith('http'):
+            img = await aiorequests.get_img(icon, size=(BUFF_ICON_SIZE, BUFF_ICON_SIZE), mode='RGBA')
+        else:
+            img = await load_image(RESOURCE_BASE_PATH / 'icon' / f'{icon}.png',
+                                   size=(BUFF_ICON_SIZE, BUFF_ICON_SIZE), mode='RGBA')
+        loaded = PMImage(img) if img else None
+    except Exception:
+        loaded = None
+    buff_icon_cache[icon] = loaded
+    return loaded.copy() if loaded else None
+
+
+async def draw_buffs(bg: PMImage, buffs: list, x: int, y: int):
+    """绘制一幕的祝福，两列排布"""
+    icon_offset = BUFF_ICON_SIZE + 10
+    name_font = fm.get('SourceHanSansCN-Bold.otf', 15)
+    level_font = fm.get('bahnschrift_bold', 13)
+    for i, buff in enumerate(buffs):
+        cell_x = x + (i % BUFF_COLUMNS) * BUFF_CELL_WIDTH
+        cell_y = y + (i // BUFF_COLUMNS) * BUFF_CELL_HEIGHT
+        icon = await load_buff_icon(buff)
+        if icon:
+            await bg.paste(icon, (cell_x, cell_y + (BUFF_CELL_HEIGHT - BUFF_ICON_SIZE) // 2))
+        name = buff.buff_name or ''
+        max_name_width = BUFF_CELL_WIDTH - icon_offset - 6
+        while name and bg.text_length(name, name_font) > max_name_width:
+            name = name[:-1]
+        await bg.text(name, cell_x + icon_offset, cell_y + 6, name_font, '#40342d')
+        if buff.buff_level is not None:
+            await bg.text(f'Lv.{buff.buff_level}', cell_x + icon_offset, cell_y + 27, level_font, '#8b7a63')
 
 
 async def draw_team_section(bg: PMImage, floors: list, top: int, medal_list: list = None):
@@ -132,8 +195,8 @@ async def draw_team_section(bg: PMImage, floors: list, top: int, medal_list: lis
     medal_icon = PMImage(await load_image(medal, size=(30, 30), mode='RGBA'))
     nomedal_icon = PMImage(await load_image(nomedal, size=(30, 30), mode='RGBA'))
     y = top + SECTION_TITLE_HEIGHT
-    for index, floor_teams in floors:
-        panel_height = floor_panel_height(floor_teams)
+    for index, floor_teams, buffs in floors:
+        panel_height = floor_panel_height(floor_teams, len(buffs))
         bg.draw.rounded_rectangle((PANEL_LEFT, y, PANEL_LEFT + PANEL_WIDTH, y + panel_height),
                                   radius=PANEL_RADIUS, outline=PANEL_BORDER, width=2)
         # 明星挑战星章，与上方星章一一对应
@@ -141,13 +204,16 @@ async def draw_team_section(bg: PMImage, floors: list, top: int, medal_list: lis
         await bg.paste(medal_icon if got_medal else nomedal_icon, (40, y + PANEL_PAD + 2))
         await bg.text(f'第{index + 1}幕', 78, y + PANEL_PAD, fm.get('SourceHanSansCN-Bold.otf', FLOOR_TITLE_FONT),
                       '#40342d')
-        card_y = y + PANEL_PAD + FLOOR_TITLE_HEIGHT + TITLE_TO_CARDS
+        cards_top = y + PANEL_PAD + FLOOR_TITLE_HEIGHT + TITLE_TO_CARDS
+        card_y = cards_top
         for i, members in enumerate(floor_teams):
             if i:
                 card_y += TEAM_GAP
             for pos, chara in enumerate(members):
                 await bg.paste(await draw_chara_card(chara), (40 + pos * (CARD_WIDTH + CARD_GAP), card_y))
             card_y += CARD_HEIGHT
+        if buffs:
+            await draw_buffs(bg, buffs, BUFF_LEFT, cards_top)
         y += panel_height + PANEL_GAP
 
 
