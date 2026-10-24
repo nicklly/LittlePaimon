@@ -1,4 +1,5 @@
 import datetime
+import re
 
 from LittlePaimon.database import Role_Combat_Info
 from LittlePaimon.utils.alias import get_chara_icon
@@ -86,7 +87,7 @@ async def draw_chara_card(chara) -> PMImage:
         element_icon = PMImage(await load_image(element_path, size=(24, 28), mode='RGBA'))
         await card.paste(element_icon, (4, 4))
     # 试用标签
-    if chara.is_trial:
+    if chara.is_trial == 2:
         trial_tag = PMImage(size=(42, 22), color=(0, 0, 0, 0), mode='RGBA')
         await trial_tag.draw_rounded_rectangle((0, 0, 42, 22), radius=6, color='#d8625c')
         await trial_tag.text('试用', (0, 42), (0, 22), fm.get('SourceHanSansCN-Bold.otf', 15), 'white', 'center')
@@ -96,6 +97,13 @@ async def draw_chara_card(chara) -> PMImage:
     await card.text(f'Lv.{level}', (0, CARD_WIDTH), (139, 173),
                     fm.get('bahnschrift_bold', 24), '#4b3d33', 'center')
     return card
+
+
+def clean_text(text: str) -> str:
+    """去掉 <color=#xxxxxx></color> 这类富文本标签"""
+    if not text:
+        return ''
+    return re.sub(r'<[^>]+>', '', str(text))
 
 
 def flatten_buffs(floor) -> list:
@@ -127,7 +135,7 @@ def collect_team_floors(info) -> list:
             buffs = flatten_buffs(floor)
             summary = None
             for buff in buffs:
-                summary = getattr(buff, 'buff_summary', None)
+                summary = clean_text(getattr(buff, 'buff_summary', None))
                 if summary:
                     break
             result.append((index, floor_teams, buffs, summary))
@@ -229,7 +237,7 @@ async def draw_buff_row(bg: PMImage, buffs: list, x: int, y: int, max_width: int
         icon = await load_buff_icon(buff)
         if icon:
             await bg.paste(icon, (cell_x, y + (BUFF_ROW_HEIGHT - BUFF_ICON_SIZE) // 2))
-        name = fit_text(bg, buff.buff_name or '', name_font, cell_width - icon_offset - 4)
+        name = fit_text(bg, clean_text(buff.buff_name), name_font, cell_width - icon_offset - 4)
         await bg.text(name, cell_x + icon_offset, y + 10, name_font, '#40342d')
         if buff.buff_level is not None:
             await bg.text(f'Lv.{buff.buff_level}', cell_x + icon_offset, y + 29, level_font, '#8b7a63')
