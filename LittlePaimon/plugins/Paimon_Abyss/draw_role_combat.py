@@ -54,11 +54,15 @@ PANEL_WIDTH = 1020
 TITLE_TO_CARDS = 12
 
 # 祝福（buff）区域：放在每幕最后一张角色卡右边
-BUFF_COLUMNS = 2
-BUFF_CELL_WIDTH = 176
-BUFF_CELL_HEIGHT = 56
-BUFF_ICON_SIZE = 40
+BUFF_ICON_SIZE = 34
+BUFF_CELL_MAX = 220
+BUFF_ROW_HEIGHT = 56
+BUFF_SUMMARY_FONT = 15
+BUFF_SUMMARY_LINE_HEIGHT = 21
+BUFF_SUMMARY_MAX_LINES = 4
+BUFF_SUMMARY_GAP = 8
 BUFF_LEFT = 40 + 4 * (CARD_WIDTH + CARD_GAP) - CARD_GAP + 20
+BUFF_AREA_WIDTH = PANEL_LEFT + PANEL_WIDTH - PANEL_PAD - BUFF_LEFT
 
 
 async def draw_chara_card(chara) -> PMImage:
@@ -104,7 +108,7 @@ def flatten_buffs(floor) -> list:
 
 
 def collect_team_floors(info) -> list:
-    """把 teams 整理成 [(幕序号, [队伍成员列表, ...], [祝福, ...]), ...]"""
+    """把 teams 整理成 [(幕序号, [队伍成员列表, ...], [祝福, ...], 祝福总览), ...]"""
     teams = getattr(info, 'teams', None)
     if not teams:
         return []
@@ -120,28 +124,75 @@ def collect_team_floors(info) -> list:
             if members:
                 floor_teams.append(members)
         if floor_teams:
-            result.append((index, floor_teams, flatten_buffs(floor)))
+            buffs = flatten_buffs(floor)
+            summary = None
+            for buff in buffs:
+                summary = getattr(buff, 'buff_summary', None)
+                if summary:
+                    break
+            result.append((index, floor_teams, buffs, summary))
     return result
 
 
-def floor_panel_height(floor_teams: list, buff_count: int = 0) -> int:
-    """单幕边框的高度（角色卡与祝福取较高的一侧）"""
+def buff_summary_lines(summary: str) -> list:
+    """按祝福区宽度把总览自动换行，最多保留若干行"""
+    if not summary:
+        return []
+    font = fm.get('SourceHanSansCN-Bold.otf', BUFF_SUMMARY_FONT)
+    lines, line = [], ''
+    for char in summary:
+        if line and font.getlength(line + char) > BUFF_AREA_WIDTH:
+            lines.append(line)
+            line = char
+        else:
+            line += char
+    if line:
+        lines.append(line)
+    if len(lines) > BUFF_SUMMARY_MAX_LINES:
+        lines = lines[:BUFF_SUMMARY_MAX_LINES]
+        while lines[-1] and font.getlength(lines[-1] + '…') > BUFF_AREA_WIDTH:
+            lines[-1] = lines[-1][:-1]
+        lines[-1] += '…'
+    return lines
+
+
+def floor_buff_block_height(buff_count: int = 0, summary: str = '') -> int:
+    """一幕右侧祝福区的高度（总览 + 祝福行）"""
+    lines = buff_summary_lines(summary)
+    height = len(lines) * BUFF_SUMMARY_LINE_HEIGHT
+    if lines and buff_count:
+        height += BUFF_SUMMARY_GAP
+    if buff_count:
+        height += BUFF_ROW_HEIGHT
+    return height
+
+
+def floor_panel_height(floor_teams: list, buff_count: int = 0, summary: str = '') -> int:
+    """单幕边框的高度（角色卡与右侧祝福区取较高的一侧）"""
     rows = len(floor_teams)
     cards_height = rows * CARD_HEIGHT + (rows - 1) * TEAM_GAP
-    buff_height = -(-buff_count // BUFF_COLUMNS) * BUFF_CELL_HEIGHT
     return (PANEL_PAD * 2 + FLOOR_TITLE_HEIGHT + TITLE_TO_CARDS
-            + max(cards_height, buff_height))
+            + max(cards_height, floor_buff_block_height(buff_count, summary)))
 
 
 def team_section_height(floors: list) -> int:
     """演出详情区总高度"""
     height = SECTION_TITLE_HEIGHT
-    for _, floor_teams, buffs in floors:
-        height += floor_panel_height(floor_teams, len(buffs)) + PANEL_GAP
+    for _, floor_teams, buffs, summary in floors:
+        height += floor_panel_height(floor_teams, len(buffs), summary) + PANEL_GAP
     return height
 
 
 buff_icon_cache = {}
+
+
+def fit_text(bg: PMImage, text: str, font, max_width: int) -> str:
+    """按宽度截断文本，结尾加省略号"""
+    if bg.text_length(text, font) <= max_width:
+        return text
+    while text and bg.text_length(text + '…', font) > max_width:
+        text = text[:-1]
+    return text + '…'
 
 
 async def load_buff_icon(buff):
@@ -165,24 +216,23 @@ async def load_buff_icon(buff):
     return loaded.copy() if loaded else None
 
 
-async def draw_buffs(bg: PMImage, buffs: list, x: int, y: int):
-    """绘制一幕的祝福，两列排布"""
-    icon_offset = BUFF_ICON_SIZE + 10
-    name_font = fm.get('SourceHanSansCN-Bold.otf', 15)
-    level_font = fm.get('bahnschrift_bold', 13)
+async def draw_buff_row(bg: PMImage, buffs: list, x: int, y: int, max_width: int):
+    """绘制一幕的祝福：一字并排"""
+    if not buffs:
+        return
+    cell_width = min(BUFF_CELL_MAX, max_width // len(buffs))
+    icon_offset = BUFF_ICON_SIZE + 8
+    name_font = fm.get('SourceHanSansCN-Bold.otf', 14)
+    level_font = fm.get('bahnschrift_bold', 12)
     for i, buff in enumerate(buffs):
-        cell_x = x + (i % BUFF_COLUMNS) * BUFF_CELL_WIDTH
-        cell_y = y + (i // BUFF_COLUMNS) * BUFF_CELL_HEIGHT
+        cell_x = x + i * cell_width
         icon = await load_buff_icon(buff)
         if icon:
-            await bg.paste(icon, (cell_x, cell_y + (BUFF_CELL_HEIGHT - BUFF_ICON_SIZE) // 2))
-        name = buff.buff_name or ''
-        max_name_width = BUFF_CELL_WIDTH - icon_offset - 6
-        while name and bg.text_length(name, name_font) > max_name_width:
-            name = name[:-1]
-        await bg.text(name, cell_x + icon_offset, cell_y + 6, name_font, '#40342d')
+            await bg.paste(icon, (cell_x, y + (BUFF_ROW_HEIGHT - BUFF_ICON_SIZE) // 2))
+        name = fit_text(bg, buff.buff_name or '', name_font, cell_width - icon_offset - 4)
+        await bg.text(name, cell_x + icon_offset, y + 10, name_font, '#40342d')
         if buff.buff_level is not None:
-            await bg.text(f'Lv.{buff.buff_level}', cell_x + icon_offset, cell_y + 27, level_font, '#8b7a63')
+            await bg.text(f'Lv.{buff.buff_level}', cell_x + icon_offset, y + 29, level_font, '#8b7a63')
 
 
 async def draw_team_section(bg: PMImage, floors: list, top: int, medal_list: list = None):
@@ -195,8 +245,8 @@ async def draw_team_section(bg: PMImage, floors: list, top: int, medal_list: lis
     medal_icon = PMImage(await load_image(medal, size=(30, 30), mode='RGBA'))
     nomedal_icon = PMImage(await load_image(nomedal, size=(30, 30), mode='RGBA'))
     y = top + SECTION_TITLE_HEIGHT
-    for index, floor_teams, buffs in floors:
-        panel_height = floor_panel_height(floor_teams, len(buffs))
+    for index, floor_teams, buffs, summary in floors:
+        panel_height = floor_panel_height(floor_teams, len(buffs), summary)
         bg.draw.rounded_rectangle((PANEL_LEFT, y, PANEL_LEFT + PANEL_WIDTH, y + panel_height),
                                   radius=PANEL_RADIUS, outline=PANEL_BORDER, width=2)
         # 明星挑战星章，与上方星章一一对应
@@ -205,6 +255,7 @@ async def draw_team_section(bg: PMImage, floors: list, top: int, medal_list: lis
         await bg.text(f'第{index + 1}幕', 78, y + PANEL_PAD, fm.get('SourceHanSansCN-Bold.otf', FLOOR_TITLE_FONT),
                       '#40342d')
         cards_top = y + PANEL_PAD + FLOOR_TITLE_HEIGHT + TITLE_TO_CARDS
+        cards_height = len(floor_teams) * CARD_HEIGHT + (len(floor_teams) - 1) * TEAM_GAP
         card_y = cards_top
         for i, members in enumerate(floor_teams):
             if i:
@@ -212,8 +263,16 @@ async def draw_team_section(bg: PMImage, floors: list, top: int, medal_list: lis
             for pos, chara in enumerate(members):
                 await bg.paste(await draw_chara_card(chara), (40 + pos * (CARD_WIDTH + CARD_GAP), card_y))
             card_y += CARD_HEIGHT
+        # 总览与卡片顶部齐平并自动换行；祝福保持原位（贴内容区底部）
+        content_height = max(cards_height, floor_buff_block_height(len(buffs), summary))
+        if summary:
+            summary_font = fm.get('SourceHanSansCN-Bold.otf', BUFF_SUMMARY_FONT)
+            line_y = cards_top
+            for line in buff_summary_lines(summary):
+                await bg.text(line, BUFF_LEFT, line_y, summary_font, '#8b7a63')
+                line_y += BUFF_SUMMARY_LINE_HEIGHT
         if buffs:
-            await draw_buffs(bg, buffs, BUFF_LEFT, cards_top)
+            await draw_buff_row(bg, buffs, BUFF_LEFT, cards_top + content_height - BUFF_ROW_HEIGHT, BUFF_AREA_WIDTH)
         y += panel_height + PANEL_GAP
 
 

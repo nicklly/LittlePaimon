@@ -16,6 +16,8 @@ def timestamp_to_datetime(
     return datetime.datetime.fromtimestamp(timestamp)
 
 class Buffs_Info(BaseModel):
+    buff_summary: Optional[str] = None
+    """单层祝福简介"""
     buff_name: Optional[str] = None
     """祝福等级"""
     buff_level: Optional[int] = None
@@ -296,6 +298,7 @@ class Role_Combat_Info(Model):
             # 获取当前层的avatars列表
             avatars = rounds_data[floors]['avatars']
             buffs = rounds_data[floors]['splendour_buff']['buffs']
+            buff2 = rounds_data[floors]['splendour_buff']['summary']
             floor_team = []
             floor_buff = []
             for group_start in range(0, len(avatars), 4):
@@ -325,9 +328,10 @@ class Role_Combat_Info(Model):
                     BuffsInfos(
                         BuffsInfos=[
                             Buffs_Info(
-                                buff_name=buff['name'],
-                                buff_icon=buff['icon'],
-                                buff_level=buff['level']
+                                buff_summary = buff2['desc'],
+                                buff_name = buff['name'],
+                                buff_icon = buff['icon'],
+                                buff_level = buff['level']
                             )
                         for buff in buff_group
                         ]
