@@ -106,6 +106,13 @@ def clean_text(text: str) -> str:
     return re.sub(r'<[^>]+>', '', str(text))
 
 
+def normalize_newline(text: str) -> str:
+    """把字面量的 \\n / \\r 转成真正的换行符"""
+    if not text:
+        return ''
+    return text.replace('\\r\\n', '\n').replace('\\n', '\n').replace('\\r', '\n')
+
+
 def flatten_buffs(floor) -> list:
     """把一幕的祝福铺平成一个列表"""
     buffs = []
@@ -135,7 +142,7 @@ def collect_team_floors(info) -> list:
             buffs = flatten_buffs(floor)
             summary = None
             for buff in buffs:
-                summary = clean_text(getattr(buff, 'buff_summary', None))
+                summary = normalize_newline(clean_text(getattr(buff, 'buff_summary', None)))
                 if summary:
                     break
             result.append((index, floor_teams, buffs, summary))
@@ -143,18 +150,22 @@ def collect_team_floors(info) -> list:
 
 
 def buff_summary_lines(summary: str) -> list:
-    """按祝福区宽度把总览自动换行，最多保留若干行"""
+    """按换行符分段，再按宽度自动换行，最多保留若干行"""
     if not summary:
         return []
     font = fm.get('SourceHanSansCN-Bold.otf', BUFF_SUMMARY_FONT)
-    lines, line = [], ''
-    for char in summary:
-        if line and font.getlength(line + char) > BUFF_AREA_WIDTH:
-            lines.append(line)
-            line = char
-        else:
-            line += char
-    if line:
+    lines = []
+    for paragraph in summary.split('\n'):
+        if not paragraph:
+            lines.append('')
+            continue
+        line = ''
+        for char in paragraph:
+            if line and font.getlength(line + char) > BUFF_AREA_WIDTH:
+                lines.append(line)
+                line = char
+            else:
+                line += char
         lines.append(line)
     if len(lines) > BUFF_SUMMARY_MAX_LINES:
         lines = lines[:BUFF_SUMMARY_MAX_LINES]
@@ -237,7 +248,8 @@ async def draw_buff_row(bg: PMImage, buffs: list, x: int, y: int, max_width: int
         icon = await load_buff_icon(buff)
         if icon:
             await bg.paste(icon, (cell_x, y + (BUFF_ROW_HEIGHT - BUFF_ICON_SIZE) // 2))
-        name = fit_text(bg, clean_text(buff.buff_name), name_font, cell_width - icon_offset - 4)
+        name = fit_text(bg, normalize_newline(clean_text(buff.buff_name)).replace('\n', ' '),
+                        name_font, cell_width - icon_offset - 4)
         await bg.text(name, cell_x + icon_offset, y + 10, name_font, '#40342d')
         if buff.buff_level is not None:
             await bg.text(f'Lv.{buff.buff_level}', cell_x + icon_offset, y + 29, level_font, '#8b7a63')
