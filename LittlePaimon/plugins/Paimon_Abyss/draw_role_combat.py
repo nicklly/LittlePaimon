@@ -55,6 +55,7 @@ PANEL_WIDTH = 1020
 TITLE_TO_CARDS = 12
 
 # 祝福（buff）区域：放在每幕最后一张角色卡右边
+BUFF_TITLE = '辉彩祝福'
 BUFF_ICON_SIZE = 34
 BUFF_CELL_MAX = 220
 BUFF_ROW_HEIGHT = 56
@@ -283,7 +284,10 @@ async def draw_team_section(bg: PMImage, floors: list, top: int, medal_list: lis
             for pos, chara in enumerate(members):
                 await bg.paste(await draw_chara_card(chara), (40 + pos * (CARD_WIDTH + CARD_GAP), card_y))
             card_y += CARD_HEIGHT
-        # 总览与卡片顶部齐平并自动换行；祝福保持原位（贴内容区底部）
+        # 右侧祝福区：标题与「第N幕」同高，总览与卡片顶部齐平，祝福贴内容区底部
+        if buffs or summary:
+            await bg.text(BUFF_TITLE, BUFF_LEFT, y + PANEL_PAD,
+                          fm.get('SourceHanSansCN-Bold.otf', FLOOR_TITLE_FONT), '#40342d')
         content_height = max(cards_height, floor_buff_block_height(len(buffs), summary))
         if summary:
             summary_font = fm.get('SourceHanSansCN-Bold.otf', BUFF_SUMMARY_FONT)
