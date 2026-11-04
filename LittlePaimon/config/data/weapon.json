@@ -262,6 +262,7 @@
     "4086029419": "蝶变",
     "2677592067": "漩流颂歌",
     "3763051755": "柔风游弦",
+    "4206156163": "秘星典谕",
     "4137694339": "(test)竿测试",
     "2719832059": "(test)穿模测试",
     "500987603": "(test)穿模测试",
@@ -476,6 +477,7 @@
     "寸心余响": "法器",
     "凝雪沉心": "法器",
     "漩流颂歌": "法器",
+    "秘星典谕": "法器",
     "猎弓": "弓",
     "历练的猎弓": "弓",
     "鸦羽弓": "弓",
@@ -787,6 +789,7 @@
     "凝雪沉心": "UI_EquipIcon_Catalyst_FrostScepter",
     "漩流颂歌": "UI_EquipIcon_Catalyst_Bludnye",
     "柔风游弦": "UI_EquipIcon_Bow_Windtalker",
+    "秘星典谕": "UI_EquipIcon_Catalyst_Chernaya",
     "(test)竿测试": "UI_EquipIcon_FishingRod",
     "(test)穿模测试": "UI_EquipIcon_Bow_Template"
   }

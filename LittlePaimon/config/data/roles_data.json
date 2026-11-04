@@ -32106,5 +32106,19 @@
     "element": "风",
     "skill": {},
     "attribute": {}
+  },
+  "米提亚": {
+    "region": "至冬",
+    "star": 5,
+    "element": "雷",
+    "skill": {},
+    "attribute": {}
+  },
+  "瓦列里": {
+    "region": "至冬",
+    "star": 4,
+    "element": "雷",
+    "skill": {},
+    "attribute": {}
   }
 }

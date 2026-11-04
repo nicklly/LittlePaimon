@@ -3723,6 +3723,66 @@
     "QualityType": "QUALITY_ORANGE",
     "WeaponType": "WEAPON_CLAYMORE"
   },
+  "10000136": {
+    "Element": "Electric",
+    "Consts": [
+      "UI_Talent_S_Mitya_01",
+      "UI_Talent_S_Mitya_02",
+      "UI_Talent_U_Mitya_01",
+      "UI_Talent_S_Mitya_03",
+      "UI_Talent_U_Mitya_02",
+      "UI_Talent_S_Mitya_04"
+    ],
+    "SkillOrder": [
+      11361,
+      11362,
+      11364
+    ],
+    "Skills": {
+      "11361": "Skill_A_Catalyst_MD",
+      "11362": "Skill_S_Mitya_01",
+      "11364": "Skill_E_Mitya_01"
+    },
+    "ProudMap": {
+      "11361": 13631,
+      "11362": 13632,
+      "11364": 13639
+    },
+    "NameTextMapHash": 2607187986,
+    "SideIconName": "UI_AvatarIcon_Side_Mitya",
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_CATALYST"
+  },
+  "10000137": {
+    "Element": "Electric",
+    "Consts": [
+      "UI_Talent_S_Valeriy_01",
+      "UI_Talent_S_Valeriy_02",
+      "UI_Talent_U_Valeriy_01",
+      "UI_Talent_S_Valeriy_03",
+      "UI_Talent_U_Valeriy_02",
+      "UI_Talent_S_Valeriy_04"
+    ],
+    "SkillOrder": [
+      30601,
+      30602,
+      30605
+    ],
+    "Skills": {
+      "30601": "Skill_A_01",
+      "30602": "Skill_S_Valeriy_01",
+      "30605": "Skill_E_Valeriy_01"
+    },
+    "ProudMap": {
+      "30601": 13731,
+      "30602": 13732,
+      "30605": 13739
+    },
+    "NameTextMapHash": 3993177338,
+    "SideIconName": "UI_AvatarIcon_Side_Valeriy",
+    "QualityType": "QUALITY_PURPLE",
+    "WeaponType": "WEAPON_SWORD_ONE_HAND"
+  },
   "10000140": {
     "Element": "Water",
     "Consts": [
