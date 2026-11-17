@@ -101,7 +101,7 @@ class RoleCombat_Infos(BaseModel):
 class FloorInfo(BaseModel):
     index: int
     """楼层数"""
-    battles_team: Optional[List[RoleCombat_Infos]]
+    battles_team: Optional[List[RoleCombat_Infos]] = None
     """出战阵容"""
     battles_buff: Optional[List[BuffsInfos]] = None
     """战斗buff"""
@@ -178,11 +178,11 @@ class Concert_infos(BaseModel):
         self.Concert_infos.pop(index)
 
 class RoleCombat_Character(BaseModel):
-    avatar_id: Optional[int]
+    avatar_id: Optional[int] = None
     """角色ID"""
-    value: Optional[int]
+    value: Optional[int] = None
     """伤害数值"""
-    rarity: Optional[int]
+    rarity: Optional[int] = None
     """角色稀有度"""
 
 class Charas(BaseModel):
@@ -219,19 +219,19 @@ class Role_Combat_Info(Model):
     """用户id"""
     uid: str = fields.CharField(max_length=255)  # type: ignore
     """原神uid"""
-    teams: Floors = fields.JSONField(encoder=Floors.json, decoder=Floors.parse_raw, default=Floors()) # type: ignore
+    teams: Floors = fields.JSONField(field_type=Floors, default=Floors()) # type: ignore
     """出战阵容"""
-    stat: Concert_info = fields.JSONField(encoder=Concert_info.json, decoder=Concert_info.parse_raw, null=True) # type: ignore
+    stat: Concert_info = fields.JSONField(field_type=Concert_info, null=True) # type: ignore
     """数据简报"""
-    max_defeat_avatar: RoleCombat_Character = fields.JSONField(encoder=RoleCombat_Character.json, decoder=RoleCombat_Character.parse_raw, null=True)# type: ignore
+    max_defeat_avatar: RoleCombat_Character = fields.JSONField(field_type=RoleCombat_Character, null=True)# type: ignore
     """最高伤害输出"""
-    max_damage_avatar: RoleCombat_Character = fields.JSONField(encoder=RoleCombat_Character.json, decoder=RoleCombat_Character.parse_raw, null=True)# type: ignore
+    max_damage_avatar: RoleCombat_Character = fields.JSONField(field_type=RoleCombat_Character, null=True)# type: ignore
     """击败最多"""
-    max_take_damage_avatar: RoleCombat_Character = fields.JSONField(encoder=RoleCombat_Character.json, decoder=RoleCombat_Character.parse_raw, null=True)# type: ignore
+    max_take_damage_avatar: RoleCombat_Character = fields.JSONField(field_type=RoleCombat_Character, null=True)# type: ignore
     """最高承伤"""
-    total_coin_consumed: RoleCombat_Character = fields.JSONField(encoder=RoleCombat_Character.json, decoder=RoleCombat_Character.parse_raw, null=True)# type: ignore
+    total_coin_consumed: RoleCombat_Character = fields.JSONField(field_type=RoleCombat_Character, null=True)# type: ignore
     """本次消耗最多"""
-    shortest: Charas = fields.JSONField(encoder=Charas.json, decoder=Charas.parse_raw, null=True)# type: ignore
+    shortest: Charas = fields.JSONField(field_type=Charas, null=True)# type: ignore
     """最快完成队伍"""
 
     class Meta:

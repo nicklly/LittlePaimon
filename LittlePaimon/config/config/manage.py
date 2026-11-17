@@ -5,10 +5,10 @@ from .model import ConfigModel
 
 class ConfigManager:
     if PAIMON_CONFIG.exists():
-        config = ConfigModel.parse_obj(load_yaml(PAIMON_CONFIG))
+        config = ConfigModel.model_validate(load_yaml(PAIMON_CONFIG))
     else:
         config = ConfigModel()
-        save_yaml(config.dict(by_alias=True), PAIMON_CONFIG)
+        save_yaml(config.model_dump(by_alias=True), PAIMON_CONFIG)
 
     @classmethod
     def set_config(cls, config_name: str, value: any):
@@ -17,7 +17,7 @@ class ConfigManager:
             :param config_name: 配置名
             :param value: 新配置值
         """
-        if config_name not in cls.config.dict(by_alias=True).keys():
+        if config_name not in cls.config.model_dump(by_alias=True).keys():
             return f"没有配置项为{config_name}"
         if (
             "启用" in config_name
@@ -39,7 +39,7 @@ class ConfigManager:
 
     @classmethod
     def save(cls):
-        save_yaml(cls.config.dict(by_alias=True), PAIMON_CONFIG)
+        save_yaml(cls.config.model_dump(by_alias=True), PAIMON_CONFIG)
 
 
 config = ConfigManager.config

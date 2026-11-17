@@ -53,7 +53,7 @@ def load_history_info(user_id: str, uid: str) -> Tuple[GachaLogInfo, bool]:
         old_gacha_info = load_json(file_path)
         if "集录祈愿" not in old_gacha_info["item_list"]:
             old_gacha_info["item_list"]["集录祈愿"] = []
-        return GachaLogInfo.parse_obj(old_gacha_info), True
+        return GachaLogInfo.model_validate(old_gacha_info), True
     else:
         return GachaLogInfo(user_id=user_id,
                             uid=uid,
@@ -77,7 +77,7 @@ def save_gacha_log_info(user_id: str, uid: str, info: GachaLogInfo):
         save_path.rename(save_path.parent / f'{save_path.name}.bak')
     # 写入新数据
     with save_path.open('w', encoding='utf-8') as f:
-        f.write(info.json(ensure_ascii=False, indent=4))
+        f.write(info.model_dump_json(ensure_ascii=False, indent=4))
 
 
 def gacha_log_to_UIGF(user_id: str, uid: str) -> Tuple[bool, str, Optional[Path]]:
@@ -168,7 +168,7 @@ async def get_gacha_log_data(user_id: str, uid: str):
             if not data:
                 break
             for item in data:
-                item_info = GachaItem.parse_obj(item)
+                item_info = GachaItem.model_validate(item)
                 if item_info not in gacha_log.item_list[pool_name]:
                     gacha_log.item_list[pool_name].append(item_info)
                     new_num += 1
@@ -218,7 +218,7 @@ def create_import_command(user_id: int):
     """
     def file_rule(event: NoticeEvent):
         if isinstance(event, GroupUploadNoticeEvent) or event.notice_type == 'offline_file':
-            return event.dict()['user_id'] == user_id
+            return event.model_dump()['user_id'] == user_id
         return False
 
     import_cmd = on_notice(priority=12, rule=Rule(file_rule), expire_time=datetime.timedelta(minutes=5), temp=True)
@@ -226,7 +226,7 @@ def create_import_command(user_id: int):
 
     @import_cmd.handle()
     async def _(event: NoticeEvent):
-        event_data = event.dict()
+        event_data = event.model_dump()
         file_name = event_data['file']['name']
         if not file_name.endswith('.json'):
             await import_cmd.finish('文件格式错误，请上传json文件', at_sender=True)
@@ -241,7 +241,7 @@ def create_import_command(user_id: int):
             gacha_log, _ = load_history_info(str(event_data['user_id']), uid)
             for item in data['list']:
                 pool_name = GACHA_TYPE_LIST[item['gacha_type']]
-                item_info = GachaItem.parse_obj(item)
+                item_info = GachaItem.model_validate(item)
                 if item_info not in gacha_log.item_list[pool_name]:
                     gacha_log.item_list[pool_name].append(item_info)
                     new_num += 1

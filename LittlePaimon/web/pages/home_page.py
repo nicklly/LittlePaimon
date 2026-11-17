@@ -1,173 +1,127 @@
-from LittlePaimon.utils import __version__
-from LittlePaimon.config import config
-from amis import (
-    Page,
-    PageSchema,
-    Html,
-    Property,
-    Service,
-    Flex,
-    ActionType,
-    LevelEnum,
-    Divider,
-    ButtonGroupSelect,
-    Log,
-    Alert,
-    Form,
-    Dialog,
-    Select,
-    Group,
-    InputText,
-    DisplayModeEnum,
-    Horizontal,
-)
+"""首页仪表盘。"""
+from __future__ import annotations
 
-logo = Html(
-    html=f'''
-<p align="center">
-    <a href="https://github.com/CMHopeSunshine/LittlePaimon/">
-        <img src="https://s1.ax1x.com/2023/02/05/pS62DJK.png"
-         width="256" height="256" alt="LittlePaimon">
-    </a>
-</p>
-<h1 align="center">LittlePaimon 控制台 V{__version__}</h1>
-<div align="center">
-    <a href="https://github.com/CMHopeSunshine/LittlePaimon" target="_blank">
-    Github仓库</a> &nbsp; · &nbsp;
-    <a href="https://docs.paimon.cherishmoon.fun/"
-     target="_blank">文档</a>
+from typing import Any, Dict
+
+from bootstrap_ui import (Alert, Badge, Button, Card, Col, Form, Heading, Hr, Input,
+                          Paragraph, Row, raw)
+
+from ..ui import layout
+
+LOG_JS = """
+async function refreshLog() {
+  const levelSelect = document.getElementById('log-level');
+  const box = document.getElementById('log-box');
+  if (!levelSelect || !box) return;
+  try {
+    const resp = await fetch('/LittlePaimon/admin/logs?level=' + levelSelect.value + '&num=200',
+                             {credentials: 'same-origin'});
+    box.textContent = await resp.text();
+    box.scrollTop = box.scrollHeight;
+  } catch (err) {
+    box.textContent = '日志获取失败：' + err;
+  }
+}
+if (location.protocol === 'http:' || location.protocol === 'https:') {
+  setInterval(function () {
+    const auto = document.getElementById('log-auto');
+    if (auto && auto.checked) refreshLog();
+  }, 3000);
+  refreshLog();
+}
+"""
+
+
+def _stat_card(title: str, value: Any) -> Card:
+    return Card(body=[
+        Paragraph(muted=True, class_name='small mb-1', text=title),
+        Heading(level=4, text=str(value if value is not None else '未知'), class_name='mb-0'),
+    ])
+
+
+def home_page(status: Dict[str, Any], notice: Any = None) -> object:
+    body = []
+
+    body.append(Row(gutter=3, children=[
+        Col(width=6, md=3, body=[_stat_card('Bot 昵称', status.get('nickname'))]),
+        Col(width=6, md=3, body=[_stat_card('Bot QQ', status.get('bot_id'))]),
+        Col(width=6, md=3, body=[_stat_card('Bot 启动时间', status.get('start_time'))]),
+        Col(width=6, md=3, body=[_stat_card('系统启动时间', status.get('system_start_time'))]),
+    ]))
+    body.append(Row(gutter=3, class_name='mt-1', children=[
+        Col(width=6, md=3, body=[_stat_card('已接收消息', status.get('msg_received'))]),
+        Col(width=6, md=3, body=[_stat_card('已发送消息', status.get('msg_sent'))]),
+        Col(width=4, md=2, body=[_stat_card('CPU 占用', status.get('cpu_percent'))]),
+        Col(width=4, md=2, body=[_stat_card('内存占用', status.get('ram_percent'))]),
+        Col(width=4, md=2, body=[_stat_card('SWAP 占用', status.get('swap_percent'))]),
+    ]))
+
+    body.append(Card(class_name='mt-3', title='快捷操作', body=[
+        raw("""
+<div class="quick-grid">
+  <form class="quick-tile" method="post" action="/LittlePaimon/admin/bot/update">
+    <div class="quick-head">
+      <span class="quick-icon"><i class="fa-solid fa-rotate"></i></span>
+      <div>
+        <div class="quick-title">检查并更新</div>
+        <div class="quick-desc">检查项目更新，更新后需要重启才会生效</div>
+      </div>
+    </div>
+    <button class="btn btn-info w-100" type="submit">
+      <i class="fa-solid fa-rotate me-1"></i>检查并更新
+    </button>
+  </form>
+
+  <form class="quick-tile" method="post" action="/LittlePaimon/admin/bot/restart"
+        onsubmit="return confirm('确认重启 Bot？重启期间页面会暂时不可访问。')">
+    <div class="quick-head">
+      <span class="quick-icon"><i class="fa-solid fa-power-off"></i></span>
+      <div>
+        <div class="quick-title">重启 Bot</div>
+        <div class="quick-desc">重启进程，页面会短暂失联</div>
+      </div>
+    </div>
+    <button class="btn btn-danger w-100" type="submit">
+      <i class="fa-solid fa-power-off me-1"></i>重启 Bot
+    </button>
+  </form>
+
+  <form class="quick-tile" method="post" action="/LittlePaimon/admin/run_cmd">
+    <div class="quick-head">
+      <span class="quick-icon"><i class="fa-solid fa-terminal"></i></span>
+      <div>
+        <div class="quick-title">执行命令</div>
+        <div class="quick-desc">在机器人所在主机执行 shell 命令</div>
+      </div>
+    </div>
+    <div class="quick-control">
+      <input class="form-control" type="text" name="cmd"
+             placeholder="输入要执行的 shell 命令" required>
+    </div>
+    <button class="btn btn-warning w-100" type="submit">
+      <i class="fa-solid fa-terminal me-1"></i>执行命令
+    </button>
+  </form>
 </div>
-<br>
-'''
-)
-select_log_num = Select(
-    label='日志数量',
-    name='log_num',
-    value=100,
-    options=[
-        {'label': 100, 'value': 100},
-        {'label': 200, 'value': 200},
-        {'label': 300, 'value': 300},
-        {'label': 400, 'value': 400},
-        {'label': 500, 'value': 500},
-    ],
-)
+"""),
+    ]))
 
-select_log_level = ButtonGroupSelect(
-    label='日志等级',
-    name='log_level',
-    btnLevel=LevelEnum.light,
-    btnActiveLevel=LevelEnum.info,
-    value='info',
-    options=[{'label': 'INFO', 'value': 'info'}, {'label': 'DEBUG', 'value': 'debug'}],
-)
+    body.append(Card(class_name='mt-3', title='运行日志', body=[
+        raw("""
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+  <select id="log-level" class="form-select form-select-sm" style="width:auto">
+    <option value="info">INFO</option>
+    <option value="debug">DEBUG</option>
+  </select>
+  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshLog()">立即刷新</button>
+  <div class="form-check form-switch">
+    <input class="form-check-input" type="checkbox" id="log-auto" checked>
+    <label class="form-check-label small" for="log-auto">自动刷新</label>
+  </div>
+  <span class="small text-secondary">DEBUG 日志需要 NoneBot 日志等级为 DEBUG</span>
+</div>
+<pre id="log-box" class="log-box border rounded p-3 small bg-body-tertiary">加载中…</pre>
+"""),
+    ]))
 
-log_page = Log(
-    autoScroll=True,
-    placeholder='暂无日志数据...',
-    operation=['stop', 'showLineNumber', 'filter'],
-    source={
-        'method': 'get',
-        'url': '/LittlePaimon/api/log?level=${log_level | raw}&num=${log_num | raw}',
-        'headers': {'token': config.secret_key[:16]},
-    },
-)
-
-cmd_input = Form(
-    mode=DisplayModeEnum.horizontal,
-    horizontal=Horizontal(left=0),
-    wrapWithPanel=False,
-    body=[
-        InputText(
-            name='command',
-            required=True,
-            clearable=True,
-            addOn=ActionType.Dialog(
-                label='执行',
-                level=LevelEnum.primary,
-                dialog=Dialog(
-                    title='命令执行结果',
-                    size='xl',
-                    body=Log(
-                        autoScroll=True,
-                        placeholder='执行命令中，请稍候...',
-                        operation=['stop', 'showLineNumber', 'filter'],
-                        source={
-                            'method': 'get',
-                            'url': '/LittlePaimon/api/run_cmd?cmd=${command | raw}',
-                            'headers': {'token': config.secret_key[:16]},
-                        },
-                    ),
-                ),
-            ),
-        )
-    ],
-)
-
-operation_button = Flex(
-    justify='center',
-    items=[
-        ActionType.Ajax(
-            label='更新',
-            api='/LittlePaimon/api/bot_update',
-            confirmText='该操作将会对Bot进行检查并尝试更新，请在更新完成后重启Bot使更新生效',
-            level=LevelEnum.info,
-        ),
-        ActionType.Ajax(
-            label='重启',
-            className='m-l',
-            api='/LittlePaimon/api/bot_restart',
-            confirmText='该操作将会使Bot重启，在完成重启之前，该页面也将无法访问（也可能会弹出报错，可无视），请耐心等待重启',
-            level=LevelEnum.danger,
-        ),
-        ActionType.Dialog(
-            label='日志',
-            className='m-l',
-            level=LevelEnum.primary,
-            dialog=Dialog(
-                title='查看日志',
-                size='xl',
-                actions=[],
-                body=[
-                    Alert(
-                        level=LevelEnum.info,
-                        body='查看最近最多500条日志，不会自动刷新，需要手动点击两次"暂停键"来进行刷新，DEBUG日志需要Nonebot日志模式为DEBUG才能查看。',
-                    ),
-                    Form(
-                        body=[Group(body=[select_log_num, select_log_level]), log_page]
-                    ),
-                ],
-            ),
-        ),
-        ActionType.Dialog(
-            label='执行命令',
-            className='m-l',
-            level=LevelEnum.warning,
-            dialog=Dialog(title='执行命令', size='lg', actions=[], body=[cmd_input]),
-        ),
-    ],
-)
-
-status = Service(
-    api='/LittlePaimon/api/status',
-    body=Property(
-        title='机器人信息',
-        column=2,
-        items=[
-            Property.Item(label='Bot昵称', content='${nickname}'),
-            Property.Item(label='Bot qq号', content='${bot_id}'),
-            Property.Item(label='Bot启动时间', content='${start_time}'),
-            Property.Item(label='系统启动时间', content='${system_start_time}'),
-            Property.Item(label='已接收信息', content='${msg_received}'),
-            Property.Item(label='已发送信息', content='${msg_sent}'),
-            Property.Item(label='CPU占用率', content='${cpu_percent}'),
-            Property.Item(label='RAM占用率', content='${ram_percent}'),
-            Property.Item(label='SWAP占用率', content='${swap_percent}', span=2),
-        ],
-    ),
-)
-
-page_detail = Page(title='', body=[logo, operation_button, Divider(), status])
-page = PageSchema(
-    url='/home', label='首页', icon='fa fa-home', isDefaultPage=True, schema=page_detail
-)
+    return layout('首页', body, active='/LittlePaimon/admin', js=LOG_JS, toast=notice)

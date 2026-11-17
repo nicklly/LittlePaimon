@@ -14,12 +14,12 @@ route = APIRouter()
 
 
 class BindCookie(BaseModel):
-    id: Optional[int]
-    user_id: Optional[int]
-    uid: Optional[int]
-    mys_id: Optional[int]
+    id: Optional[int] = None
+    user_id: Optional[int] = None
+    uid: Optional[int] = None
+    mys_id: Optional[int] = None
     cookie: str
-    stoken: Optional[str]
+    stoken: Optional[str] = None
 
 
 
@@ -225,7 +225,7 @@ async def add_public_cookie(cookie_type: str, force: bool, data: BindCookie):
 @route.post('/update_private_cookie', response_class=JSONResponse, dependencies=[authentication()])
 async def update_cookie(force: bool, data: BindCookie):
     if force:
-        await PrivateCookie.filter(id=data.id).update(**data.dict(exclude={'id'}))
+        await PrivateCookie.filter(id=data.id).update(**data.model_dump(exclude={'id'}))
         return {'status': 0, 'msg': f'QQ{data.user_id}的UID{data.uid}的Cookie强制修改成功。'}
     else:
         if mys_id := re.search(r'(?:(?:login_uid|account_mid|account_id|stmid|ltmid|stuid|ltuid)(?:_v2)?)=(\d+)',

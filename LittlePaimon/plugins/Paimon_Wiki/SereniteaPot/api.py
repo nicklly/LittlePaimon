@@ -4,7 +4,7 @@ from LittlePaimon.database import PublicCookie, PrivateCookie
 from LittlePaimon.utils import logger
 from LittlePaimon.utils.requests import aiorequests
 
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 from .models import Item
 
 HEADER = {
@@ -39,7 +39,7 @@ async def get_blueprint_data(share_code: int, user_id: Optional[str]) -> Tuple[U
                                      headers=headers)
         data = resp.json()
         if data['retcode'] == 0:
-            items = parse_obj_as(List[Item], data['data']['list'])
+            items = TypeAdapter(List[Item]).validate_python(data['data']['list'])
             items.sort(key=lambda i: (i.num, i.level), reverse=True)
             logger.info('尘歌壶摹本', f'摹数<m>{share_code}</m>数据<g>获取成功</g>')
             return items, cookie.cookie
@@ -68,7 +68,7 @@ async def get_blueprint_material_data(items: List[Item], cookie: Optional[str]) 
                                   headers=headers)
     data = resp.json()
     if data['retcode'] == 0:
-        items = parse_obj_as(List[Item], data['data']['list'])
+        items = TypeAdapter(List[Item]).validate_python(data['data']['list'])
         items.sort(key=lambda i: (i.num, i.level), reverse=True)
         return items
     elif data['retcode'] != -100:

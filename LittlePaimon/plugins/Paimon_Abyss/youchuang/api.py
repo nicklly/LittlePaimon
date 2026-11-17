@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 
 from LittlePaimon.utils.requests import aiorequests
 from .models import TeamRateResult, TeamRate
@@ -36,6 +36,6 @@ async def get_team_rate() -> Tuple[TeamRateResult, float]:
         'version': VERSION,
         'layer':   2
     }, headers=HEADERS)).json()['result']
-    return TeamRateResult(rateListUp=parse_obj_as(List[TeamRate], data_up['rateList']),
-                          rateListDown=parse_obj_as(List[TeamRate], data_down['rateList']),
+    return TeamRateResult(rateListUp=TypeAdapter(List[TeamRate]).validate_python(data_up['rateList']),
+                          rateListDown=TypeAdapter(List[TeamRate]).validate_python(data_down['rateList']),
                           userCount=data_up['userCount']), VERSION

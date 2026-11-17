@@ -43,7 +43,7 @@ async def get_chat_global_config():
                     for member in members
                 ]
             )
-        config = config_manager.config.dict(exclude={"group_config"})
+        config = config_manager.config.model_dump(exclude={"group_config"})
         config["member_list"] = member_list
         return config
     except ValueError:
@@ -79,7 +79,7 @@ async def get_chat_global_config(group_id: int):
             }
             for member in members
         ]
-        config = config_manager.get_group_config(group_id).dict()
+        config = config_manager.get_group_config(group_id).model_dump()
         config["break_probability"] = config["break_probability"] * 100
         config["speak_continuously_probability"] = (
             config["speak_continuously_probability"] * 100

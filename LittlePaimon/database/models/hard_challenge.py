@@ -107,9 +107,9 @@ class Hard_Challenge_Info(Model):
     """用户id"""
     uid: str = fields.CharField(max_length=255)  # type: ignore
     """原神uid"""
-    teams: Abyss2Infos = fields.JSONField(encoder=Abyss2Infos.json, decoder=Abyss2Infos.parse_raw, null=True)
+    teams: Abyss2Infos = fields.JSONField(field_type=Abyss2Infos, null=True)
     """出战阵容"""
-    battle: BattleInfos = fields.JSONField(encoder=BattleInfos.json, decoder=BattleInfos.parse_raw, null=True)
+    battle: BattleInfos = fields.JSONField(field_type=BattleInfos, null=True)
     """战斗信息"""
 
 

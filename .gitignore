@@ -148,3 +148,8 @@ resources
 !LittlePaimon/config
 /resources/
 config
+
+# 本地 UI 演示图（保留在本地，不提交）
+demo/
+# 运行时生成的文件
+rebooting.json

@@ -127,30 +127,30 @@ class AbyssInfo(Model):
     max_floor: Optional[str] = fields.CharField(max_length=255, null=True)  # type: ignore
     """到达层数"""
     max_battle: AbyssCharacters = fields.JSONField(
-        encoder=AbyssCharacters.json, decoder=AbyssCharacters.parse_raw, null=True
+        field_type=AbyssCharacters, null=True
     )  # type: ignore
     """出战次数最多"""
     max_defeat: AbyssCharacter = fields.JSONField(
-        encoder=AbyssCharacter.json, decoder=AbyssCharacter.parse_raw, null=True
+        field_type=AbyssCharacter, null=True
     )  # type: ignore
     """击败最多"""
     max_damage: AbyssCharacter = fields.JSONField(
-        encoder=AbyssCharacter.json, decoder=AbyssCharacter.parse_raw, null=True
+        field_type=AbyssCharacter, null=True
     )  # type: ignore
     """伤害最高"""
     max_take_damage: AbyssCharacter = fields.JSONField(
-        encoder=AbyssCharacter.json, decoder=AbyssCharacter.parse_raw, null=True
+        field_type=AbyssCharacter, null=True
     )  # type: ignore
     """承受伤害最高"""
     max_normal_skill: AbyssCharacter = fields.JSONField(
-        encoder=AbyssCharacter.json, decoder=AbyssCharacter.parse_raw, null=True
+        field_type=AbyssCharacter, null=True
     )  # type: ignore
     """元素战技释放最多"""
     max_energy_skill: AbyssCharacter = fields.JSONField(
-        encoder=AbyssCharacter.json, decoder=AbyssCharacter.parse_raw, null=True
+        field_type=AbyssCharacter, null=True
     )  # type: ignore
     """元素爆发释放最多"""
-    floors: Floors = fields.JSONField(encoder=Floors.json, decoder=Floors.parse_raw, default=Floors())  # type: ignore
+    floors: Floors = fields.JSONField(field_type=Floors, default=Floors())  # type: ignore
     """楼层具体信息"""
     update_time: datetime.datetime = fields.DatetimeField(null=True)  # type: ignore
     """更新时间"""

@@ -1,17 +1,42 @@
-from LittlePaimon.utils import __version__
-from amis import AmisAPI, Collapse, Form, InputNumber, Textarea, Action, LevelEnum, Divider, Page, Html
+"""面向普通用户的 Cookie 绑定页面。"""
+from __future__ import annotations
 
-collapse_text = "<h2>重要提醒：</h2>Cookie的作用相当于账号密码，非常重要，如是非可信任的机器人，请勿绑定！！<br><h2>获取方法：</h2>详见<a href='https://docs.qq.com/doc/DQ3JLWk1vQVllZ2Z1'>Cookie获取教程</a>"
-api = AmisAPI(method='post', url='/LittlePaimon/api/bind_cookie')
-collapse = Collapse(header='Cookie说明及获取方法', body=Html(html=collapse_text))
-form = Form(title='绑定Cookie', api=api, body=[
-    InputNumber(name='user_id', label='QQ号', required=True),
-    Textarea(name='cookie', label='Cookie', required=True, clearable=True,showCounter=False),
-    # Checkboxes(name='function', label='同时开启以下功能', options=[
-    #     {'label': '米游社自动签到', 'value': 'sign'},
-    #     {'label': '米游币自动获取', 'value': 'coin'}
-    # ], joinValues=False, extractValue=True)
-], actions=[Action(label='绑定', level=LevelEnum.success, confirmText='我已知晓Cookie的重要性，确认绑定', type='submit'),
-            Action(label='重置', level=LevelEnum.warning, type='reset')])
-footer = Html(html=f'<div class="p-2 text-center bg-blue-100">Copyright © 2021 - 2022 <a href="https://github.com/CMHopeSunshine/LittlePaimon" target="_blank" class="link-secondary">LittlePaimon v{__version__}</a> X<a target="_blank" href="https://github.com/baidu/amis" class="link-secondary" rel="noopener"> amis v2.2.0</a></div>')
-bind_cookie_page = Page(title='绑定Cookie', body=[collapse, Divider(), form, footer])
+from typing import Optional
+
+from bootstrap_ui import (Accordion, AccordionItem, Alert, Card, Form, Heading, Input,
+                          Paragraph, Textarea, field, raw)
+
+from ..ui import layout
+
+
+def bind_cookie_page(result: Optional[str] = None, ok: bool = True) -> object:
+    body = []
+    if result:
+        body.append(Alert(color='success' if ok else 'danger', body=[result]))
+
+    body.append(Card(body=[
+        raw('<div class="auth-logo"><i class="fa-solid fa-link"></i></div>'),
+        Heading(level=4, text='绑定米游社 Cookie', class_name='text-center mb-1'),
+        Paragraph(muted=True, class_name='text-center small mb-4',
+                  text='绑定后机器人可以免密码查询你的原神数据'),
+        Accordion(class_name='mb-4', items=[
+            AccordionItem(title='Cookie 安全说明与获取方法', body=[
+                Paragraph(text='Cookie 的作用相当于账号密码，请仅在你信任的机器人上绑定。'),
+                Paragraph(muted=True, class_name='small',
+                          text='获取方法：浏览器登录米游社后，从开发者工具中复制完整 Cookie 字符串。'),
+                Paragraph(muted=True, class_name='small mb-0',
+                          text='绑定成功后 Cookie 会保存在机器人数据库中，可随时联系管理员删除。'),
+            ]),
+        ]),
+        Form(
+            action='/LittlePaimon/cookie',
+            method='post',
+            submit_label='绑 定',
+            body=[
+                field('QQ号', Input(name='user_id', required=True, placeholder='你的 QQ 号')),
+                field('Cookie', Textarea(name='cookie', rows=5, required=True,
+                                         placeholder='粘贴完整的 Cookie 字符串')),
+            ],
+        ),
+    ]))
+    return layout('绑定 Cookie', body, auth=True)

@@ -85,7 +85,7 @@ async def connect():
     建立数据库连接
     """
     try:
-        await Tortoise.init(DATABASE)
+        await Tortoise.init(DATABASE, _enable_global_fallback=True)
         await Tortoise.generate_schemas()
         logger.opt(colors=True).success('<u><y>[数据库]</y></u><g>连接成功</g>')
     except Exception as e:

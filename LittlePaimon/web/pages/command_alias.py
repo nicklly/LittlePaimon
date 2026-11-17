@@ -1,71 +1,100 @@
-from amis import Form, Switch, InputSubForm, Hidden, ButtonGroupSelect, InputText, Radios, Checkbox, Select, Static, Alert, Html, PageSchema, Page
+"""命令别名管理页面。"""
+from __future__ import annotations
 
-main_form = Form(
-    title='命令别名',
-    initApi='get:/LittlePaimon/api/command_alias',
-    api='post:/LittlePaimon/api/command_alias',
-    submitText='保存',
-    body=[
-        Switch(name='command_alias_enable', label='功能开关', onText='全局启用', offText='全局关闭'),
-        InputSubForm(
-            name='items',
-            label='已设置的命令别名',
-            multiple=True,
-            btnLabel='${alias} >> ${command}',
-            draggable=True,
-            addable=True,
-            removable=True,
-            addButtonText='添加命令别名',
-            showErrorMsg=False,
-            form=Form(
-                title='命令别名',
-                body=[
-                    Hidden(name='id'),
-                    ButtonGroupSelect(name='is_regex', label='匹配模式', value=False,
-                                      options=[
-                                          {'label': '普通匹配', 'value': False},
-                                          {'label': '正则匹配', 'value': True}
-                                      ]),
-                    InputText(name='alias', label='命令别名', required=True),
-                    InputText(name='command', label='原命令', required=True),
-                    Radios(name='mode', label='匹配位置', value='前缀', hiddenOn='${is_regex == true}', required=True,
-                           options=[
-                               {
-                                   'label': '前缀',
-                                   'value': '前缀'
-                               },
-                               {
-                                   'label': '后缀',
-                                   'value': '后缀'
-                               },
-                               {
-                                   'label': '全匹配',
-                                   'value': '全匹配'
-                               }
-                           ]),
-                    Checkbox(name='is_reverse', label='是否反转', hiddenOn='${is_regex == true}'),
-                    Select(name='group_id', label='设置群', value='all', required=True,
-                           source='${group_list}')
-                ]
-            )
+from typing import Any, List, Optional
+
+from bootstrap_ui import (Alert, Badge, Button, Card, Checkbox, Form, Hidden, Input,
+                          Paragraph, Row, Col, Select, Span, Table, TableColumn, field)
+
+from ..ui import layout
+from .public_cookie import action_form, button_html
+
+MODE_OPTIONS = [('前缀', '前缀'), ('后缀', '后缀'), ('全匹配', '全匹配')]
+
+
+def alias_page(aliases: List[Any], enabled: bool, notice: Optional[tuple] = None,
+               test_result: Optional[str] = None) -> object:
+    body = []
+
+    rows = []
+    for alias in aliases:
+        delete_form = action_form(
+            '/LittlePaimon/admin/alias/delete', {'id': alias.id},
+            button_html('fa-regular fa-trash-can', '删除', 'danger', outline=True),
+            confirm='确认删除该命令别名？',
         )
+        rows.append({
+            'id': alias.id,
+            'alias': alias.alias,
+            'command': alias.command,
+            'mode': '正则' if alias.is_regex else alias.mode,
+            'reverse': '是' if alias.is_reverse else '否',
+            'group': '全群' if str(alias.group_id) == 'all' else alias.group_id,
+            'priority': alias.priority,
+            'actions': Span(body=[delete_form]),
+        })
+
+    toggle_form = Form(
+        method='post', action='/LittlePaimon/admin/alias/toggle', submit_label='保存开关',
+        body=[field('功能开关', Checkbox(name='enable', switch=True, checked=enabled))],
+    )
+
+    body.append(Card(title='命令别名', body=[
+        Paragraph(muted=True, class_name='small',
+                  text='把消息中的文本替换成另一个命令；正则模式下按正则替换。'),
+        toggle_form,
+        Table(
+            columns=[
+                TableColumn(label='ID', key='id'),
+                TableColumn(label='别名', key='alias'),
+                TableColumn(label='原命令', key='command'),
+                TableColumn(label='匹配模式', key='mode'),
+                TableColumn(label='反转', key='reverse', align='center'),
+                TableColumn(label='生效群', key='group'),
+                TableColumn(label='优先级', key='priority', align='center'),
+                TableColumn(label='操作', key='actions', nowrap=True),
+            ],
+            rows=rows,
+            hover=True,
+            empty_text='暂无命令别名',
+        ),
+    ]))
+
+    body.append(Card(class_name='mt-3', title='添加命令别名', body=[
+        Form(
+            method='post', action='/LittlePaimon/admin/alias/add', submit_label='添加',
+            body=[
+                Row(gutter=3, children=[
+                    Col(md=6, body=[field('命令别名', Input(name='alias', required=True))]),
+                    Col(md=6, body=[field('原命令', Input(name='command', required=True))]),
+                    Col(md=4, body=[field('匹配模式', Select(name='mode', options=MODE_OPTIONS,
+                                                        value='前缀'))]),
+                    Col(md=4, body=[field('生效群', Input(name='group_id', value='all'),
+                                          help='填 all 表示所有群')]),
+                    Col(md=4, body=[field('优先级', Input(name='priority', type='number', value=99))]),
+                    Col(md=6, body=[field('正则匹配', Checkbox(name='is_regex', switch=True))]),
+                    Col(md=6, body=[field('是否反转', Checkbox(name='is_reverse', switch=True))]),
+                ]),
+            ],
+        ),
+    ]))
+
+    test_card_body = [
+        Form(
+            method='post', action='/LittlePaimon/admin/alias/test', submit_label='测试',
+            body=[
+                Row(gutter=3, children=[
+                    Col(md=4, body=[field('测试群', Input(name='group_id', value='all'))]),
+                    Col(md=8, body=[field('测试消息', Input(name='message', required=True))]),
+                ]),
+            ],
+        ),
     ]
-)
+    if test_result is not None:
+        test_card_body.append(Alert(color='info', class_name='mt-3', body=[
+            Paragraph(class_name='mb-1', text='替换后的消息：'),
+            Paragraph(class_name='mb-0 font-monospace', text=test_result),
+        ]))
+    body.append(Card(class_name='mt-3', title='测试', body=test_card_body))
 
-test_form = Form(
-    title='测试',
-    api='get:/LittlePaimon/api/test_command_alias?group_id=${group_id}&message=${message}',
-    submitText='测试',
-    body=[
-        Select(name='group_id', label='测试群', value='all', required=True, source='${group_list}'),
-        InputText(name='message', label='测试消息', required=True),
-        Static(className='text-red-600', name='new_msg', label='命令别名修改后消息', visibleOn="typeof data.new_msg !== 'undefined'")
-    ]
-)
-
-tips = Alert(level='info',
-             body=Html(html='命令别名的详细用法和配置例子可以在<a href="https://docs.paimon.cherishmoon.fun/configs/manage/plugin-manage.html#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%91%BD%E4%BB%A4%E5%88%AB%E5%90%8D" target="_blank">文档</a>中查看，配置保存后，可以在下方的"测试"一栏进行实时测试。'))
-
-
-page = PageSchema(url='/bot_config/command_alias', icon='fa  fa-angle-double-right', label='命令别名',
-                  schema=Page(title='', initApi='/LittlePaimon/api/get_group_list?include_all=true', body=[tips, main_form, test_form]))
+    return layout('命令别名', body, active='/LittlePaimon/admin/alias', toast=notice)

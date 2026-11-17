@@ -1,7 +1,7 @@
 import re
 from typing import Literal, List
 
-from pydantic import BaseModel, parse_raw_as
+from pydantic import BaseModel, TypeAdapter
 
 try:
     import ujson as json
@@ -59,8 +59,8 @@ CHARA_RE = '|'.join(CHARACTERS)
 class PydanticListModel(BaseModel):
     @classmethod
     def encoder(cls, models: List['PydanticListModel']):
-        return json.dumps(models, default=cls.dict)
+        return json.dumps([model.model_dump() for model in models])
 
     @classmethod
     def decoder(cls, json_data: str):
-        return parse_raw_as(List[cls], json_data)
+        return TypeAdapter(List[cls]).validate_json(json_data)

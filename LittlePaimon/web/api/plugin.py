@@ -105,7 +105,7 @@ async def set_plugin_detail(plugin_info: PluginInfo):
 
 @route.get('/get_config', response_class=JSONResponse, dependencies=[authentication()])
 async def get_config():
-    config = ConfigManager.config.dict(by_alias=True)
+    config = ConfigManager.config.model_dump(by_alias=True)
     config['米游社签到开始时间'] = datetime.datetime(1970, 1, 1, hour=config['米游社签到开始时间(小时)'], minute=config['米游社签到开始时间(分钟)']).strftime('%H:%M')
     config['米游币开始执行时间'] = datetime.datetime(1970, 1, 1, hour=config['米游币开始执行时间(小时)'], minute=config['米游币开始执行时间(分钟)']).strftime('%H:%M')
     config['实时便签停止检查时间段'] = (f'0{config["实时便签停止检查开始时间"]}' if config['实时便签停止检查开始时间'] < 10 else str(config['实时便签停止检查开始时间'])) + \

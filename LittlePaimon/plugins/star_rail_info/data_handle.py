@@ -55,5 +55,5 @@ def get_info(uid: str, chara_name: str) -> Optional[Character]:
     data = load_json(path)
     for char in data["characters"]:
         if char["name"] == chara_name:
-            return Character.parse_obj(char)
+            return Character.model_validate(char)
     return None

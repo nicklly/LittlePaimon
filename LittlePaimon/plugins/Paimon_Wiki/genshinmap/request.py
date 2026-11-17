@@ -48,7 +48,7 @@ async def get_labels(map_id: MapID) -> List[Tree]:
         `list[Tree]`
     """
     data = await _request(f"/label/tree?map_id={map_id}&app_sn=ys_obc")
-    return [Tree.parse_obj(i) for i in data["tree"]]
+    return [Tree.model_validate(i) for i in data["tree"]]
 
 
 async def get_points(map_id: MapID) -> List[Point]:
@@ -63,7 +63,7 @@ async def get_points(map_id: MapID) -> List[Point]:
         `list[Point]`
     """
     data = await _request(f"/point/list?map_id={map_id}&app_sn=ys_obc")
-    return [Point.parse_obj(i) for i in data["point_list"]]
+    return [Point.model_validate(i) for i in data["point_list"]]
 
 
 async def get_maps(map_id: MapID) -> MapInfo:
@@ -78,7 +78,7 @@ async def get_maps(map_id: MapID) -> MapInfo:
         `MapInfo`
     """
     data = await _request(f"/info?map_id={map_id}&app_sn=ys_obc&lang=zh-cn")
-    return MapInfo.parse_obj(data["info"])
+    return MapInfo.model_validate(data["info"])
 
 
 async def get_spot_from_game(
@@ -125,7 +125,7 @@ async def get_spot_from_game(
         headers={"Cookie": cookie},
     )
     data = _raise_for_retcode(resp)
-    spot_kinds_data = SpotKinds.parse_obj(data)
+    spot_kinds_data = SpotKinds.model_validate(data)
     ids = [kind.id for kind in spot_kinds_data.list]
 
     # 3.获取坐标
@@ -141,7 +141,7 @@ async def get_spot_from_game(
     data = _raise_for_retcode(resp)
     spots: Spots = {}
     for k, v in data["spots"].items():
-        spots[int(k)] = [Spot.parse_obj(i) for i in v["list"]]
+        spots[int(k)] = [Spot.model_validate(i) for i in v["list"]]
     return spots, spot_kinds_data
 
 
@@ -160,7 +160,7 @@ async def get_page_label(map_id: MapID) -> List[PageLabel]:
         f"/get_map_pageLabel?map_id={map_id}&app_sn=ys_obc&lang=zh-cn",
         API_CLIENT,
     )
-    return [PageLabel.parse_obj(i) for i in data["list"]]
+    return [PageLabel.model_validate(i) for i in data["list"]]
 
 
 async def get_anchors(map_id: MapID) -> List[Anchor]:
@@ -178,4 +178,4 @@ async def get_anchors(map_id: MapID) -> List[Anchor]:
         f"/map_anchor/list?map_id={map_id}&app_sn=ys_obc&lang=zh-cn",
         API_CLIENT,
     )
-    return [Anchor.parse_obj(i) for i in data["list"]]
+    return [Anchor.model_validate(i) for i in data["list"]]

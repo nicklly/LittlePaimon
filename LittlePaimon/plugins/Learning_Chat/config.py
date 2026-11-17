@@ -23,7 +23,7 @@ class ChatGroupConfig(BaseModel):
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
-            if key in self.__fields__:
+            if key in type(self).model_fields:
                 self.__setattr__(key, value)
 
 
@@ -39,7 +39,7 @@ class ChatConfig(BaseModel):
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
-            if key in self.__fields__:
+            if key in type(self).model_fields:
                 self.__setattr__(key, value)
 
 
@@ -47,7 +47,7 @@ class ChatConfigManager:
     def __init__(self):
         self.file_path = LEARNING_CHAT_CONFIG
         if self.file_path.exists():
-            self.config = ChatConfig.parse_obj(load_yaml(self.file_path))
+            self.config = ChatConfig.model_validate(load_yaml(self.file_path))
         else:
             self.config = ChatConfig()
         self.save()
@@ -60,10 +60,10 @@ class ChatConfigManager:
 
     @property
     def config_list(self) -> List[str]:
-        return list(self.config.dict(by_alias=True).keys())
+        return list(self.config.model_dump(by_alias=True).keys())
 
     def save(self):
-        save_yaml(self.config.dict(by_alias=True), self.file_path)
+        save_yaml(self.config.model_dump(by_alias=True), self.file_path)
 
 
 config_manager = ChatConfigManager()

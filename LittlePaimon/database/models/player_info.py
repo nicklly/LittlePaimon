@@ -22,35 +22,35 @@ class PlayerBaseInfo(BaseModel):
     """
     玩家基础数据信息，比如神瞳数、宝箱数等
     """
-    activate_days: Optional[int]
+    activate_days: Optional[int] = None
     """活跃天数"""
-    achievements: Optional[int]
+    achievements: Optional[int] = None
     """成就数"""
-    abyss_floor: Optional[str]
+    abyss_floor: Optional[str] = None
     """深渊到达层数"""
-    way_point: Optional[int]
+    way_point: Optional[int] = None
     """传送点解锁数"""
-    domain_num: Optional[int]
+    domain_num: Optional[int] = None
     """秘境解锁数"""
-    anemoculus: Optional[int]
+    anemoculus: Optional[int] = None
     """风神瞳收集数"""
-    geoculus: Optional[int]
+    geoculus: Optional[int] = None
     """岩神瞳收集数"""
-    electroculus: Optional[int]
+    electroculus: Optional[int] = None
     """雷神瞳收集数"""
-    dendroculus: Optional[int]
+    dendroculus: Optional[int] = None
     """草神瞳收集数"""
-    character_num: Optional[int]
+    character_num: Optional[int] = None
     """角色收集数数"""
-    luxurious_chest: Optional[int]
+    luxurious_chest: Optional[int] = None
     """华丽宝箱收集数"""
-    precious_chest: Optional[int]
+    precious_chest: Optional[int] = None
     """珍贵宝箱收集数"""
-    exquisite_chest: Optional[int]
+    exquisite_chest: Optional[int] = None
     """精致宝箱收集数"""
-    common_chest: Optional[int]
+    common_chest: Optional[int] = None
     """普通宝箱收集数"""
-    magic_chest: Optional[int]
+    magic_chest: Optional[int] = None
     """奇馈宝箱收集数"""
 
 
@@ -62,54 +62,54 @@ class PlayerWorldInfo(BaseModel):
     """地区名称"""
     unlock: bool
     """是否解锁"""
-    percent: Optional[int]
+    percent: Optional[int] = None
     """探索度，100%以1000显示，注意转换"""
-    level: Optional[int]
+    level: Optional[int] = None
     """声望等级"""
-    tree_level: Optional[int]
+    tree_level: Optional[int] = None
     """神樱树或忍冬之树等级"""
-    stone_level: Optional[int]
+    stone_level: Optional[int] = None
     """流明石等级"""
 
 
 class PlayerWorldInfos(BaseModel):
-    MengDe:         Optional[PlayerWorldInfo]
+    MengDe:         Optional[PlayerWorldInfo] = None
     """蒙德"""
-    LiYue:          Optional[PlayerWorldInfo]
+    LiYue:          Optional[PlayerWorldInfo] = None
     """璃月"""
-    DaoQi:          Optional[PlayerWorldInfo]
+    DaoQi:          Optional[PlayerWorldInfo] = None
     """稻妻"""
-    SnowMountain:   Optional[PlayerWorldInfo]
+    SnowMountain:   Optional[PlayerWorldInfo] = None
     """龙脊雪山"""
-    ChasmsMaw:      Optional[PlayerWorldInfo]
+    ChasmsMaw:      Optional[PlayerWorldInfo] = None
     """层岩巨渊"""
-    ChasmsMawBelow: Optional[PlayerWorldInfo]
+    ChasmsMawBelow: Optional[PlayerWorldInfo] = None
     """层岩巨渊地下"""
-    Enkanomiya:     Optional[PlayerWorldInfo]
+    Enkanomiya:     Optional[PlayerWorldInfo] = None
     """渊下宫"""
-    Xumi:           Optional[PlayerWorldInfo]
+    Xumi:           Optional[PlayerWorldInfo] = None
     """须弥"""
-    Fengdan:        Optional[PlayerWorldInfo]
+    Fengdan:        Optional[PlayerWorldInfo] = None
     """枫丹"""
-    Chenyugu:       Optional[PlayerWorldInfo]
+    Chenyugu:       Optional[PlayerWorldInfo] = None
     """沉玉谷"""
-    Chenyugu_nl:    Optional[PlayerWorldInfo]
+    Chenyugu_nl:    Optional[PlayerWorldInfo] = None
     """沉玉谷·南陵"""
-    Chenyugu_sg:    Optional[PlayerWorldInfo]
+    Chenyugu_sg:    Optional[PlayerWorldInfo] = None
     """沉玉谷·上谷"""
-    Lx_mountain:    Optional[PlayerWorldInfo]
+    Lx_mountain:    Optional[PlayerWorldInfo] = None
     """来歆山"""
-    Sea_of_Yore:     Optional[PlayerWorldInfo]
+    Sea_of_Yore:     Optional[PlayerWorldInfo] = None
     """旧日之海"""
-    Nata:           Optional[PlayerWorldInfo]
+    Nata:           Optional[PlayerWorldInfo] = None
     """纳塔"""
-    Mount_Athos:    Optional[PlayerWorldInfo]
+    Mount_Athos:    Optional[PlayerWorldInfo] = None
     """远古圣山"""
-    Nordkalotten:   Optional[PlayerWorldInfo]
+    Nordkalotten:   Optional[PlayerWorldInfo] = None
     """挪德卡莱"""
-    Fx_Mountain:    Optional[PlayerWorldInfo]
+    Fx_Mountain:    Optional[PlayerWorldInfo] = None
     """风息山"""
-    Emptiness:      Optional[PlayerWorldInfo]
+    Emptiness:      Optional[PlayerWorldInfo] = None
     """空之神殿"""
 
     def list(self):
@@ -174,13 +174,11 @@ class PlayerInfo(Model):
     """展示角色列表"""
     namecards: Optional[List[int]] = fields.JSONField(null=True)
     """展示名片列表"""
-    base_info: Optional[PlayerBaseInfo] = fields.JSONField(encoder=PlayerBaseInfo.json,
-                                                           decoder=PlayerBaseInfo.parse_raw, null=True)
+    base_info: Optional[PlayerBaseInfo] = fields.JSONField(field_type=PlayerBaseInfo, null=True)
     """玩家基本信息，如宝箱、神瞳等"""
-    world_explore: Optional[PlayerWorldInfos] = fields.JSONField(encoder=PlayerWorldInfos.json,
-                                                                 decoder=PlayerWorldInfos.parse_raw, null=True)
+    world_explore: Optional[PlayerWorldInfos] = fields.JSONField(field_type=PlayerWorldInfos, null=True)
     """世界探索数据"""
-    home: Optional[PlayerHomeInfo] = fields.JSONField(encoder=PlayerHomeInfo.json, decoder=PlayerHomeInfo.parse_raw,
+    home: Optional[PlayerHomeInfo] = fields.JSONField(field_type=PlayerHomeInfo,
                                                       null=True)
     """尘歌壶数据"""
     update_time: datetime.datetime = fields.DatetimeField(null=True)

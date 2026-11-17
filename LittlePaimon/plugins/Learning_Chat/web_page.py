@@ -1,630 +1,483 @@
-from amis import ColumnList, AmisList, ActionType, TableCRUD, TableColumn
-from amis import Dialog, PageSchema, Page, Switch, Remark, InputNumber, InputTag, Action
-from amis import Form, LevelEnum, Select, InputArray, Alert
-from LittlePaimon.utils import NICKNAME
-from LittlePaimon.web.pages import admin_app
+"""群聊学习的 Web 管理页（bootstrap_ui 版）。
 
-global_config_form = Form(
-    title="全局配置",
-    name="global_config",
-    initApi="/LittlePaimon/api/chat_global_config",
-    api="post:/LittlePaimon/api/chat_global_config",
-    interval=None,
-    body=[
-        Switch(
-            label="群聊学习总开关",
-            name="total_enable",
-            value="${total_enable}",
-            onText="开启",
-            offText="关闭",
-            labelRemark=Remark(
-                shape="circle", content="关闭后，全局都将不会再学习和回复(但是仍会对收到的消息进行记录)。"
-            ),
-        ),
-        InputNumber(
-            label="单句关键词数量",
-            name="KEYWORDS_SIZE",
-            value="${KEYWORDS_SIZE}",
-            visibleOn="${total_enable}",
-            min=2,
-            labelRemark=Remark(
-                shape="circle", content="单句语句标签数量，影响对一句话的主题词提取效果，建议保持默认为3。"
-            ),
-        ),
-        InputNumber(
-            label="跨群回复阈值",
-            name="cross_group_threshold",
-            value="${cross_group_threshold}",
-            visibleOn="${total_enable}",
-            min=1,
-            labelRemark=Remark(
-                shape="circle", content="当学习到的一种回复在N个群都有，那么这个回复就会变为全局回复。"
-            ),
-        ),
-        InputNumber(
-            label="最高学习次数",
-            name="learn_max_count",
-            value="${learn_max_count}",
-            visibleOn="${total_enable}",
-            min=2,
-            labelRemark=Remark(
-                shape="circle",
-                content="学习的回复最高能累计到的次数，值越高，这个回复就会学习得越深，越容易进行回复，如果不想每次都大概率固定回复某一句话，可以将该值设低点。",
-            ),
-        ),
-        InputTag(
-            label="全局屏蔽词",
-            name="ban_words",
-            value="${ban_words}",
-            enableBatchAdd=True,
-            placeholder="添加全局屏蔽词",
-            visibleOn="${total_enable}",
-            joinValues=False,
-            extractValue=True,
-            labelRemark=Remark(
-                shape="circle",
-                content="全局屏蔽词，含有这些词的消息不会学习和回复，默认已屏蔽at、分享、语音、和视频等消息。(回车进行添加)",
-            ),
-        ),
-        InputTag(
-            label="全局屏蔽用户",
-            source="${member_list}",
-            name="ban_users",
-            value="${ban_users}",
-            enableBatchAdd=True,
-            placeholder="添加全局屏蔽用户",
-            visibleOn="${total_enable}",
-            joinValues=False,
-            extractValue=True,
-            labelRemark=Remark(
-                shape="circle", content="全局屏蔽用户，和这些用户有关的消息不会学习和回复。(回车进行添加)"
-            ),
-        ),
-        InputTag(
-            label="自定义词典",
-            name="dictionary",
-            value="${dictionary}",
-            enableBatchAdd=True,
-            placeholder="添加自定义词语",
-            visibleOn="${total_enable}",
-            joinValues=False,
-            extractValue=True,
-            labelRemark=Remark(
-                shape="circle",
-                content="添加自定义词语，让分词能够识别未收录的词汇，提高学习的准确性。你可以添加特殊名词，这样学习时就会将该词看作一个整体，目前词典中已默认添加部分原神相关词汇。(回车进行添加)",
-            ),
-        ),
-    ],
-    actions=[
-        Action(label="保存", level=LevelEnum.success, type="submit"),
-        Action(label="重置", level=LevelEnum.warning, type="reset"),
-    ],
-)
-group_select = Select(
-    label="分群配置", name="group_id", source="${group_list}", placeholder="选择群"
-)
-group_config_form = Form(
-    title="分群配置",
-    visibleOn="group_id != null",
-    initApi="/LittlePaimon/api/chat_group_config?group_id=${group_id}",
-    api="post:/LittlePaimon/api/chat_group_config?group_id=${group_id}",
-    interval=None,
-    body=[
-        Switch(
-            label="群聊学习开关",
-            name="enable",
-            value="${enable}",
-            onText="开启",
-            offText="关闭",
-            labelRemark=Remark(shape="circle", content="针对该群的群聊学习开关，关闭后，仅该群不会学习和回复。"),
-        ),
-        InputNumber(
-            label="回复阈值",
-            name="answer_threshold",
-            value="${answer_threshold}",
-            visibleOn="${enable}",
-            min=2,
-            labelRemark=Remark(shape="circle", content="可以理解为学习成功所需要的次数，值越低学得越快。"),
-        ),
-        InputArray(
-            label="回复阈值权重",
-            name="answer_threshold_weights",
-            value="${answer_threshold_weights}",
-            items=InputNumber(min=1, max=100, value=25, suffix="%"),
-            inline=True,
-            visibleOn="${enable}",
-            labelRemark=Remark(
-                shape="circle",
-                content="影响回复阈值的计算方式，以默认的回复阈值4、权重[10, 30, 60]为例，在计算阈值时，60%概率为4，30%概率为3，10%概率为2。",
-            ),
-        ),
-        InputNumber(
-            label="复读阈值",
-            name="repeat_threshold",
-            value="${repeat_threshold}",
-            visibleOn="${enable}",
-            min=2,
-            labelRemark=Remark(
-                shape="circle", content=f"跟随复读所需要的阈值，有N个人复读后，{NICKNAME}就会跟着复读。"
-            ),
-        ),
-        InputNumber(
-            label="打断复读概率",
-            name="break_probability",
-            value="${break_probability}",
-            min=0,
-            max=100,
-            suffix="%",
-            visibleOn="${AND(enable, speak_enable)}",
-            labelRemark=Remark(shape="circle", content="达到复读阈值时，打断复读而不是跟随复读的概率。"),
-        ),
-        InputTag(
-            label="屏蔽词",
-            name="ban_words",
-            value="${ban_words}",
-            enableBatchAdd=True,
-            placeholder="添加屏蔽词",
-            visibleOn="${enable}",
-            joinValues=False,
-            extractValue=True,
-            labelRemark=Remark(shape="circle", content="含有这些词的消息不会学习和回复。(回车进行添加)"),
-        ),
-        InputTag(
-            label="屏蔽用户",
-            source="${member_list}",
-            name="ban_users",
-            value="${ban_users}",
-            enableBatchAdd=True,
-            placeholder="添加屏蔽用户",
-            visibleOn="${enable}",
-            joinValues=False,
-            extractValue=True,
-            labelRemark=Remark(shape="circle", content="和该群中这些用户有关的消息不会学习和回复。(回车进行添加)"),
-        ),
-        Switch(
-            label="主动发言开关",
-            name="speak_enable",
-            value="${speak_enable}",
-            visibleOn="${enable}",
-            labelRemark=Remark(
-                shape="circle",
-                content=f"是否允许{NICKNAME}在该群主动发言，主动发言是指每隔一段时间挑选一个热度较高的群，主动发一些学习过的内容。",
-            ),
-        ),
-        InputNumber(
-            label="主动发言阈值",
-            name="speak_threshold",
-            value="${speak_threshold}",
-            visibleOn="${AND(enable, speak_enable)}",
-            min=0,
-            labelRemark=Remark(shape="circle", content="值越低，主动发言的可能性越高。"),
-        ),
-        InputNumber(
-            label="主动发言最小间隔",
-            name="speak_min_interval",
-            value="${speak_min_interval}",
-            min=0,
-            visibleOn="${AND(enable, speak_enable)}",
-            suffix="秒",
-            labelRemark=Remark(shape="circle", content="进行主动发言的最小时间间隔。"),
-        ),
-        InputNumber(
-            label="连续主动发言概率",
-            name="speak_continuously_probability",
-            value="${speak_continuously_probability}",
-            min=0,
-            max=100,
-            suffix="%",
-            visibleOn="${AND(enable, speak_enable)}",
-            labelRemark=Remark(shape="circle", content="触发主动发言时，连续进行发言的概率。"),
-        ),
-        InputNumber(
-            label="最大连续主动发言句数",
-            name="speak_continuously_max_len",
-            value="${speak_continuously_max_len}",
-            visibleOn="${AND(enable, speak_enable)}",
-            min=1,
-            labelRemark=Remark(shape="circle", content="连续主动发言的最大句数。"),
-        ),
-        InputNumber(
-            label="主动发言附带戳一戳概率",
-            name="speak_poke_probability",
-            value="${speak_poke_probability}",
-            min=0,
-            max=100,
-            suffix="%",
-            visibleOn="${AND(enable, speak_enable)}",
-            labelRemark=Remark(
-                shape="circle", content="主动发言时附带戳一戳的概率，会在最近5个发言者中随机选一个戳。"
-            ),
-        ),
-    ],
-    actions=[
-        Action(label="保存", level=LevelEnum.success, type="submit"),
-        ActionType.Ajax(
-            label="保存至所有群",
-            level=LevelEnum.primary,
-            confirmText="确认将当前配置保存至所有群？",
-            api="post:/LittlePaimon/api/chat_group_config?group_id=all",
-        ),
-        Action(label="重置", level=LevelEnum.warning, type="reset"),
-    ],
-)
+替换原先基于 amis 的页面：全部服务端渲染，操作通过表单 POST 完成。
+"""
+from __future__ import annotations
 
-blacklist_table = TableCRUD(
-    mode="table",
-    title="",
-    syncLocation=False,
-    api="/LittlePaimon/api/get_chat_blacklist",
-    interval=15000,
-    headerToolbar=[
-        ActionType.Ajax(
-            label="取消所有禁用",
-            level=LevelEnum.warning,
-            confirmText="确定要取消所有禁用吗？",
-            api="put:/LittlePaimon/api/delete_all?type=blacklist",
-        )
-    ],
-    itemActions=[
-        ActionType.Ajax(
-            tooltip="取消禁用",
-            icon="fa fa-check-circle-o text-info",
-            confirmText="取消该被禁用的内容/关键词，但是仍然需要重新学习哦！",
-            api="delete:/LittlePaimon/api/delete_chat?type=blacklist&id=${id}",
-        )
-    ],
-    footable=True,
-    columns=[
-        TableColumn(
-            type="tpl",
-            tpl="${keywords|truncate:20}",
-            label="内容/关键词",
-            name="keywords",
-            searchable=True,
-            popOver={
-                "mode": "dialog",
-                "title": "全文",
-                "className": "break-all",
-                "body": {"type": "tpl", "tpl": "${keywords}"},
-            },
-        ),
-        TableColumn(label="已禁用的群", name="bans", searchable=True),
-    ],
-)
-message_table = TableCRUD(
-    mode="table",
-    title="",
-    syncLocation=False,
-    api="/LittlePaimon/api/get_chat_messages",
-    interval=12000,
-    headerToolbar=[
-        ActionType.Ajax(
-            label="删除所有聊天记录",
-            level=LevelEnum.warning,
-            confirmText="确定要删除所有聊天记录吗？",
-            api="put:/LittlePaimon/api/delete_all?type=message",
-        )
-    ],
-    itemActions=[
-        ActionType.Ajax(
-            tooltip="禁用",
-            icon="fa fa-ban text-danger",
-            confirmText="禁用该聊天记录相关的学习内容和回复",
-            api="put:/LittlePaimon/api/ban_chat?type=message&id=${id}",
-        ),
-        ActionType.Ajax(
-            tooltip="删除",
-            icon="fa fa-times text-danger",
-            confirmText="删除该条聊天记录",
-            api="delete:/LittlePaimon/api/delete_chat?type=message&id=${id}",
-        ),
-    ],
-    footable=True,
-    columns=[
-        TableColumn(label="消息ID", name="message_id"),
-        TableColumn(label="群ID", name="group_id", searchable=True),
-        TableColumn(label="用户ID", name="user_id", searchable=True),
-        TableColumn(
-            type="tpl",
-            tpl="${raw_message|truncate:20}",
-            label="消息",
-            name="message",
-            searchable=True,
-            popOver={
-                "mode": "dialog",
-                "title": "消息全文",
-                "className": "break-all",
-                "body": {"type": "tpl", "tpl": "${raw_message}"},
-            },
-        ),
-        TableColumn(
-            type="tpl",
-            tpl="${time|date:YYYY-MM-DD HH\\:mm\\:ss}",
-            label="时间",
-            name="time",
-            sortable=True,
-        ),
-    ],
-)
-answer_table = TableCRUD(
-    mode="table",
-    syncLocation=False,
-    footable=True,
-    api="/LittlePaimon/api/get_chat_answers",
-    interval=12000,
-    headerToolbar=[
-        ActionType.Ajax(
-            label="删除所有已学习的回复",
-            level=LevelEnum.warning,
-            confirmText="确定要删除所有已学习的回复吗？",
-            api="put:/LittlePaimon/api/delete_all?type=answer",
-        )
-    ],
-    itemActions=[
-        ActionType.Ajax(
-            tooltip="禁用",
-            icon="fa fa-ban text-danger",
-            confirmText="禁用并删除该已学回复",
-            api="put:/LittlePaimon/api/ban_chat?type=answer&id=${id}",
-        ),
-        ActionType.Ajax(
-            tooltip="删除",
-            icon="fa fa-times text-danger",
-            confirmText="仅删除该已学回复，不会禁用，所以依然能继续学",
-            api="delete:/LittlePaimon/api/delete_chat?type=answer&id=${id}",
-        ),
-    ],
-    columns=[
-        TableColumn(label="ID", name="id", visible=False),
-        TableColumn(label="群ID", name="group_id", searchable=True),
-        TableColumn(
-            type="tpl",
-            tpl="${keywords|truncate:20}",
-            label="内容/关键词",
-            name="keywords",
-            searchable=True,
-            popOver={
-                "mode": "dialog",
-                "title": "内容全文",
-                "className": "break-all",
-                "body": {"type": "tpl", "tpl": "${keywords}"},
-            },
-        ),
-        TableColumn(
-            type="tpl",
-            tpl="${time|date:YYYY-MM-DD HH\\:mm\\:ss}",
-            label="最后学习时间",
-            name="time",
-            sortable=True,
-        ),
-        TableColumn(label="次数", name="count", sortable=True),
-        ColumnList(
-            label="完整消息",
-            name="messages",
-            breakpoint="*",
-            source="${messages}",
-            listItem=AmisList.Item(body=[AmisList.Item.ListBodyField(name="msg")]),
-        ),
-    ],
-)
-answer_table_on_context = TableCRUD(
-    mode="table",
-    syncLocation=False,
-    footable=True,
-    api="/LittlePaimon/api/get_chat_answers?context_id=${id}&page=${page}&perPage=${perPage}&orderBy=${orderBy}&orderDir=${orderDir}",
-    interval=12000,
-    headerToolbar=[
-        ActionType.Ajax(
-            label="删除该内容所有回复",
-            level=LevelEnum.warning,
-            confirmText="确定要删除该条内容已学习的回复吗？",
-            api="put:/LittlePaimon/api/delete_all?type=answer&id=${id}",
-        )
-    ],
-    itemActions=[
-        ActionType.Ajax(
-            tooltip="禁用",
-            icon="fa fa-ban text-danger",
-            confirmText="禁用并删除该已学回复",
-            api="put:/LittlePaimon/api/ban_chat?type=answer&id=${id}",
-        ),
-        ActionType.Ajax(
-            tooltip="删除",
-            icon="fa fa-times text-danger",
-            confirmText="仅删除该已学回复，但不禁用，依然能继续学",
-            api="delete:/LittlePaimon/api/delete_chat?type=answer&id=${id}",
-        ),
-    ],
-    columns=[
-        TableColumn(label="ID", name="id", visible=False),
-        TableColumn(label="群ID", name="group_id"),
-        TableColumn(
-            type="tpl",
-            tpl="${keywords|truncate:20}",
-            label="内容/关键词",
-            name="keywords",
-            searchable=True,
-            popOver={
-                "mode": "dialog",
-                "title": "内容全文",
-                "className": "break-all",
-                "body": {"type": "tpl", "tpl": "${keywords}"},
-            },
-        ),
-        TableColumn(
-            type="tpl",
-            tpl="${time|date:YYYY-MM-DD HH\\:mm\\:ss}",
-            label="最后学习时间",
-            name="time",
-            sortable=True,
-        ),
-        TableColumn(label="次数", name="count", sortable=True),
-        ColumnList(
-            label="完整消息",
-            name="messages",
-            breakpoint="*",
-            source="${messages}",
-            listItem=AmisList.Item(body=[AmisList.Item.ListBodyField(name="msg")]),
-        ),
-    ],
-)
-context_table = TableCRUD(
-    mode="table",
-    title="",
-    syncLocation=False,
-    api="/LittlePaimon/api/get_chat_contexts",
-    interval=12000,
-    headerToolbar=[
-        ActionType.Ajax(
-            label="删除所有学习内容",
-            level=LevelEnum.warning,
-            confirmText="确定要删除所有已学习的内容吗？",
-            api="put:/LittlePaimon/api/delete_all?type=context",
-        )
-    ],
-    itemActions=[
-        ActionType.Dialog(
-            tooltip="回复列表",
-            icon="fa fa-book text-info",
-            dialog=Dialog(title="回复列表", size="lg", body=answer_table_on_context),
-        ),
-        ActionType.Ajax(
-            tooltip="禁用",
-            icon="fa fa-ban text-danger",
-            confirmText="禁用并删除该学习的内容及其所有回复",
-            api="put:/LittlePaimon/api/ban_chat?type=context&id=${id}",
-        ),
-        ActionType.Ajax(
-            tooltip="删除",
-            icon="fa fa-times text-danger",
-            confirmText="仅删除该学习的内容及其所有回复，但不禁用，依然能继续学",
-            api="delete:/LittlePaimon/api/delete_chat?type=context&id=${id}",
-        ),
-    ],
-    footable=True,
-    columns=[
-        TableColumn(label="ID", name="id", visible=False),
-        TableColumn(
-            type="tpl",
-            tpl="${keywords|truncate:20}",
-            label="内容/关键词",
-            name="keywords",
-            searchable=True,
-            popOver={
-                "mode": "dialog",
-                "title": "内容全文",
-                "className": "break-all",
-                "body": {"type": "tpl", "tpl": "${keywords}"},
-            },
-        ),
-        TableColumn(
-            type="tpl",
-            tpl="${time|date:YYYY-MM-DD HH\\:mm\\:ss}",
-            label="最后学习时间",
-            name="time",
-            sortable=True,
-        ),
-        TableColumn(label="已学次数", name="count", sortable=True),
-    ],
-)
+import datetime
+import re
+import typing
+from math import ceil
+from typing import Any, Dict, List, Optional
 
-message_page = PageSchema(
-    url="/chat/messages",
-    icon="fa fa-comments",
-    label="群聊消息",
-    schema=Page(
-        title="群聊消息",
-        body=[
-            Alert(
-                level=LevelEnum.info,
-                className="white-space-pre-wrap",
-                body=(
-                    f"此数据库记录了{NICKNAME}收到的除指令外的聊天记录。\n"
-                    '· 点击"禁用"可以将某条聊天记录进行禁用，这样其相关的学习就会列入禁用列表。\n'
-                    '· 点击"删除"可以删除某条记录，但不会影响它的学习。\n'
-                    f"· 可以通过搜索{NICKNAME}的QQ号，来查看它的回复记录。"
-                ),
-            ),
-            message_table,
-        ],
-    ),
-)
-context_page = PageSchema(
-    url="/chat/contexts",
-    icon="fa fa-comment",
-    label="学习内容",
-    schema=Page(
-        title="内容",
-        body=[
-            Alert(
-                level=LevelEnum.info,
-                className="white-space-pre-wrap",
-                body=(
-                    f"此数据库记录了{NICKNAME}所学习的内容。\n"
-                    '· 点击"回复列表"可以查看该条内容已学习到的可能的回复。\n'
-                    '· 点击"禁用"可以将该学习进行禁用，以后不会再学。\n'
-                    '· 点击"删除"可以删除该学习，让它重新开始学习这句话。'
-                ),
-            ),
-            context_table,
-        ],
-    ),
-)
-answer_page = PageSchema(
-    url="/chat/answers",
-    icon="fa fa-commenting-o",
-    label="内容回复",
-    schema=Page(
-        title="回复",
-        body=[
-            Alert(
-                level=LevelEnum.info,
-                className="white-space-pre-wrap",
-                body=(
-                    f'此数据库记录了{NICKNAME}已学习到的所有回复，但看不到这些回复属于哪些内容，推荐到"学习内容"表进行操作。\n'
-                    '· 点击"禁用"可以将该回复进行禁用，以后不会再学。\n'
-                    '· 点击"删除"可以删除该回复，让它重新开始学习。'
-                ),
-            ),
-            answer_table,
-        ],
-    ),
-)
-blacklist_page = PageSchema(
-    url="/chat/blacklist",
-    icon="fa fa-ban",
-    label="禁用列表",
-    schema=Page(
-        title="禁用列表",
-        interval=60000,
-        body=[
-            Alert(
-                level=LevelEnum.info,
-                className="white-space-pre-wrap",
-                body=f"此数据库记录了{NICKNAME}被禁用的内容/关键词。\n"
-                "· 可以取消禁用，使其能够重新继续学习。\n"
-                "· 不能在此添加禁用，只能在群中回复[不可以]或者在<配置>中添加屏蔽词来达到禁用效果。",
-            ),
-            blacklist_table,
-        ],
-    ),
-)
-database_page = PageSchema(
-    label="数据库",
-    icon="fa fa-database",
-    children=[message_page, context_page, answer_page, blacklist_page],
-)
-config_page = PageSchema(
-    url="/chat/configs",
-    icon="fa fa-wrench",
-    label="配置",
-    schema=Page(
-        title="配置",
-        initApi="/LittlePaimon/api/get_group_list",
-        body=[global_config_form, group_select, group_config_form],
-    ),
-)
-chat_page = PageSchema(
-    label="群聊学习", icon="fa fa-wechat (alias)", children=[config_page, database_page]
-)
-admin_app.pages[0].children.append(chat_page)
+from bootstrap_ui import (Alert, Badge, Button, Card, Checkbox, Col, Form, Hidden, Input,
+                          Paragraph, Row, Select, Span, Table, TableColumn, Textarea, field,
+                          raw)
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse
+
+from LittlePaimon.web import PageRouter
+from LittlePaimon.web.pages.public_cookie import action_form, button_html
+from LittlePaimon.web.ui import (flash_redirect, guard, layout, notice, pager, redirect,
+                                 register_nav, render)
+
+from .config import config_manager
+from .models import ChatAnswer, ChatBlackList, ChatContext, ChatMessage
+
+try:
+    import jieba_fast as jieba
+except ImportError:
+    import jieba
+
+router = APIRouter()
+register_nav('群聊学习', '/LittlePaimon/admin/chat', 'fa-solid fa-comments')
+
+CHAT_NAV = [
+    ('配置', '/LittlePaimon/admin/chat', 'fa-solid fa-gear'),
+    ('消息', '/LittlePaimon/admin/chat/messages', 'fa-solid fa-comments'),
+    ('学习内容', '/LittlePaimon/admin/chat/contexts', 'fa-solid fa-book'),
+    ('回复', '/LittlePaimon/admin/chat/answers', 'fa-solid fa-reply'),
+    ('禁用列表', '/LittlePaimon/admin/chat/blacklist', 'fa-solid fa-ban'),
+]
+
+
+def _menu(active: str) -> Any:
+    links = ''.join(
+        f'<a class="nav-link{" active" if href == active else ""}" href="{href}">'
+        f'<i class="{icon}"></i><span>{text}</span></a>'
+        for text, href, icon in CHAT_NAV
+    )
+    return raw(f'<ul class="nav nav-pills flex-column config-menu">{links}</ul>')
+
+
+def _wrap(active: str, nodes: list) -> list:
+    """左侧竖排菜单 + 右侧内容，与配置页保持一致。"""
+    return [raw('<div class="config-grid">'), _menu(active),
+            raw('<div class="config-content">'), *nodes, raw('</div></div>')]
+
+
+def _fmt_time(value: Any) -> str:
+    """数据库里存的是时间戳。"""
+    try:
+        return datetime.datetime.fromtimestamp(int(value)).strftime('%Y-%m-%d %H:%M')
+    except (TypeError, ValueError, OSError):
+        return str(value or '')
+
+
+def _back(url: str, msg: str, kind: str = 'success'):
+    return flash_redirect(url, msg, kind)
+
+
+async def _form(request: Request) -> Dict[str, str]:
+    form = await request.form()
+    return {key: str(value) for key, value in form.items()}
+
+
+def _is_list(annotation: Any) -> bool:
+    return typing.get_origin(annotation) in (list, List)
+
+
+def _config_form(cfg: Any, action: str, *, percent_fields=()) -> Form:
+    children = []
+    for name, info in type(cfg).model_fields.items():
+        if name == 'group_config':
+            continue
+        label = info.alias or name
+        annotation = info.annotation
+        value = getattr(cfg, name, None)
+        if annotation is bool:
+            control = Checkbox(name=name, switch=True, checked=bool(value))
+        elif annotation is int:
+            control = Input(name=name, type='number', value=value)
+        elif annotation is float:
+            shown = value * 100 if name in percent_fields else value
+            control = Input(name=name, type='number', step='0.01', value=shown)
+        elif _is_list(annotation):
+            control = Input(name=name, value=','.join(str(item) for item in value or []),
+                            placeholder='英文逗号分隔')
+        else:
+            control = Input(name=name, value='' if value is None else str(value))
+        children.append(Col(md=6, body=[field(label, control)]))
+    return Form(action=action, method='post', submit_label='保存',
+                body=[Row(gutter=3, children=children)])
+
+
+def _parse(cfg: Any, form: Dict[str, str], *, percent_fields=(), skip=('group_config',)) -> Dict[str, Any]:
+    values: Dict[str, Any] = {}
+    for name, info in type(cfg).model_fields.items():
+        if name in skip:
+            continue
+        annotation = info.annotation
+        if annotation is bool:
+            values[name] = name in form
+        elif annotation is int:
+            raw = form.get(name)
+            if raw not in (None, ''):
+                try:
+                    values[name] = int(float(raw))
+                except ValueError:
+                    pass
+        elif annotation is float:
+            raw = form.get(name)
+            if raw not in (None, ''):
+                try:
+                    number = float(raw)
+                except ValueError:
+                    continue
+                values[name] = number / 100 if name in percent_fields else number
+        elif _is_list(annotation):
+            raw = form.get(name, '')
+            items = [item.strip() for item in re.split(r'[,\s]+', raw) if item.strip()]
+            origin = typing.get_origin(annotation)
+            args = typing.get_args(annotation)
+            if args and args[0] is int:
+                values[name] = [int(item) for item in items if item.isdigit()]
+            else:
+                values[name] = items
+        else:
+            if name in form:
+                values[name] = form[name]
+    return values
+
+
+def chat_config_page(notice_data: Optional[tuple] = None) -> object:
+    cfg = config_manager.config
+    body = []
+    body.append(Card(title='全局配置', body=[
+        Paragraph(muted=True, class_name='small',
+                  text='关闭总开关后全局都不再学习和回复；屏蔽词/用户用英文逗号分隔。'),
+        _config_form(cfg, '/LittlePaimon/admin/chat/config'),
+    ]))
+
+    groups = sorted(cfg.group_config.keys())
+    options = ''.join(f'<option value="{g}">{g}</option>' for g in groups)
+    if not options:
+        options = "<option value=''>暂无分群配置</option>"
+    disabled = ' disabled' if not groups else ''
+    body.append(Card(class_name='mt-3', title='分群配置', body=[
+        raw(
+            '<form class="d-flex flex-wrap gap-2 align-items-center" '
+            'onsubmit="location.href=\'/LittlePaimon/admin/chat/group/\' + '
+            'this.group_id.value; return false;">'
+            f'<select class="form-select" name="group_id" style="max-width:240px"{disabled}>'
+            f'{options}</select>'
+            f'<button class="btn btn-secondary btn-sm" type="submit"{disabled}>'
+            '编辑该群配置</button>'
+            '</form>'
+        ),
+    ]))
+    return layout('群聊学习', _wrap('/LittlePaimon/admin/chat', body),
+                  active='/LittlePaimon/admin/chat', toast=notice_data)
+
+
+def chat_group_page(group_id: int, notice_data: Optional[tuple] = None) -> object:
+    cfg = config_manager.get_group_config(group_id)
+    body = []
+    body.append(Card(title=f'群 {group_id} 配置', body=[
+        Paragraph(muted=True, class_name='small',
+                  text='概率类配置以百分比填写（0-100）。'),
+        _config_form(cfg, f'/LittlePaimon/admin/chat/group/{group_id}',
+                     percent_fields=('break_probability', 'speak_continuously_probability',
+                                     'speak_poke_probability')),
+    ]))
+    return layout(f'群 {group_id} 配置', _wrap('/LittlePaimon/admin/chat', body),
+                  active='/LittlePaimon/admin/chat', toast=notice_data)
+
+
+def _table_card(title: str, columns: List[TableColumn], rows: List[dict], empty: str) -> Card:
+    return Card(title=title, body=[Table(columns=columns, rows=rows, hover=True, empty_text=empty)])
+
+
+CHAT_PAGE_SIZE = 10
+
+
+def _del_form(action: str, page: Optional[int] = None, **hidden) -> Any:
+    if page and page > 1:
+        hidden['page'] = page
+    return action_form(
+        action, hidden,
+        button_html('fa-regular fa-trash-can', '删除', 'danger', outline=True),
+        confirm='确认删除？',
+    )
+
+
+def _ban_form(kind: str, id_: Any, page: Optional[int] = None) -> Any:
+    fields = {'type': kind, 'id': id_}
+    if page and page > 1:
+        fields['page'] = page
+    return action_form(
+        '/LittlePaimon/admin/chat/ban', fields,
+        button_html('fa-solid fa-ban', '禁用', 'warning', outline=True),
+        confirm='确认禁用该内容？',
+    )
+
+
+async def _paginate(model: Any, order_by: str, page: int):
+    total = await model.all().count()
+    total_pages = max(1, ceil(total / CHAT_PAGE_SIZE))
+    page = min(max(1, int(page)), total_pages)
+    items = await (model.all().order_by(order_by)
+                   .offset((page - 1) * CHAT_PAGE_SIZE).limit(CHAT_PAGE_SIZE))
+    return items, page, total_pages, total
+
+
+async def chat_messages_page(notice_data: Optional[tuple] = None, page: int = 1) -> object:
+    items, page, total_pages, total = await _paginate(ChatMessage, '-id', page)
+    rows = []
+    for item in items:
+        rows.append({
+            'id': item.id,
+            'group': item.group_id,
+            'user': item.user_id,
+            'message': (item.raw_message or '')[:60],
+            'time': _fmt_time(item.time),
+            'actions': Span(body=[_ban_form('message', item.id, page),
+                                  _del_form('/LittlePaimon/admin/chat/delete', page,
+                                            type='message', id=item.id)]),
+        })
+    body = []
+    body.append(_table_card(f'聊天记录（第 {page}/{total_pages} 页，共 {total} 条）', [
+        TableColumn(label='ID', key='id'),
+        TableColumn(label='群', key='group'),
+        TableColumn(label='用户', key='user'),
+        TableColumn(label='消息', key='message'),
+        TableColumn(label='时间', key='time'),
+        TableColumn(label='操作', key='actions', nowrap=True),
+    ], rows, '暂无聊天记录'))
+    body.append(pager(page, total_pages, '/LittlePaimon/admin/chat/messages'))
+    return layout('群聊消息', _wrap('/LittlePaimon/admin/chat/messages', body),
+                  active='/LittlePaimon/admin/chat/messages', toast=notice_data)
+
+
+async def chat_contexts_page(notice_data: Optional[tuple] = None, page: int = 1) -> object:
+    items, page, total_pages, total = await _paginate(ChatContext, '-time', page)
+    rows = []
+    for item in items:
+        rows.append({
+            'id': item.id,
+            'keywords': (item.keywords or '')[:60],
+            'count': item.count,
+            'time': _fmt_time(item.time),
+            'actions': Span(body=[_ban_form('context', item.id, page),
+                                  _del_form('/LittlePaimon/admin/chat/delete', page,
+                                            type='context', id=item.id)]),
+        })
+    body = []
+    body.append(_table_card(f'学习内容（第 {page}/{total_pages} 页，共 {total} 条）', [
+        TableColumn(label='ID', key='id'),
+        TableColumn(label='内容/关键词', key='keywords'),
+        TableColumn(label='已学次数', key='count'),
+        TableColumn(label='最后学习', key='time'),
+        TableColumn(label='操作', key='actions', nowrap=True),
+    ], rows, '暂无学习内容'))
+    body.append(pager(page, total_pages, '/LittlePaimon/admin/chat/contexts'))
+    return layout('学习内容', _wrap('/LittlePaimon/admin/chat/contexts', body),
+                  active='/LittlePaimon/admin/chat/contexts', toast=notice_data)
+
+
+async def chat_answers_page(notice_data: Optional[tuple] = None, page: int = 1) -> object:
+    items, page, total_pages, total = await _paginate(ChatAnswer, '-count', page)
+    rows = []
+    for item in items:
+        rows.append({
+            'id': item.id,
+            'context': item.context_id,
+            'keywords': (item.keywords or '')[:60],
+            'count': item.count,
+            'actions': Span(body=[_ban_form('answer', item.id, page),
+                                  _del_form('/LittlePaimon/admin/chat/delete', page,
+                                            type='answer', id=item.id)]),
+        })
+    body = []
+    body.append(_table_card(f'已学回复（第 {page}/{total_pages} 页，共 {total} 条）', [
+        TableColumn(label='ID', key='id'),
+        TableColumn(label='内容ID', key='context'),
+        TableColumn(label='关键词', key='keywords'),
+        TableColumn(label='次数', key='count'),
+        TableColumn(label='操作', key='actions', nowrap=True),
+    ], rows, '暂无已学回复'))
+    body.append(pager(page, total_pages, '/LittlePaimon/admin/chat/answers'))
+    return layout('已学回复', _wrap('/LittlePaimon/admin/chat/answers', body),
+                  active='/LittlePaimon/admin/chat/answers', toast=notice_data)
+
+
+async def chat_blacklist_page(notice_data: Optional[tuple] = None, page: int = 1) -> object:
+    items, page, total_pages, total = await _paginate(ChatBlackList, 'id', page)
+    rows = []
+    for item in items:
+        bans = '全局禁用' if getattr(item, 'global_ban', False) else ', '.join(
+            str(g) for g in (item.ban_group_id or []))
+        rows.append({
+            'id': item.id,
+            'keywords': (item.keywords or '')[:60],
+            'bans': bans,
+            'actions': _del_form('/LittlePaimon/admin/chat/delete', page,
+                                 type='blacklist', id=item.id),
+        })
+    body = []
+    body.append(_table_card(f'禁用列表（第 {page}/{total_pages} 页，共 {total} 条）', [
+        TableColumn(label='ID', key='id'),
+        TableColumn(label='内容/关键词', key='keywords'),
+        TableColumn(label='禁用范围', key='bans'),
+        TableColumn(label='操作', key='actions', nowrap=True),
+    ], rows, '暂无禁用记录'))
+    body.append(pager(page, total_pages, '/LittlePaimon/admin/chat/blacklist'))
+    return layout('禁用列表', _wrap('/LittlePaimon/admin/chat/blacklist', body),
+                  active='/LittlePaimon/admin/chat/blacklist', toast=notice_data)
+
+
+# --------------------------------------------------------------------------- 路由
+
+@router.get('/LittlePaimon/admin/chat', response_class=HTMLResponse)
+async def chat_config_get(request: Request):
+    if by_guard := guard(request):
+        return by_guard
+    group_id = request.query_params.get('group_id')
+    if group_id:
+        # 兼容旧链接，跳转到不带查询参数的路径
+        return redirect(f'/LittlePaimon/admin/chat/group/{group_id}')
+    return render(chat_config_page(notice(request)))
+
+
+@router.get('/LittlePaimon/admin/chat/group/{group_id}', response_class=HTMLResponse)
+async def chat_group_get(request: Request, group_id: int):
+    if by_guard := guard(request):
+        return by_guard
+    return render(chat_group_page(group_id, notice(request)))
+
+
+@router.post('/LittlePaimon/admin/chat/config')
+async def chat_config_post(request: Request):
+    if by_guard := guard(request):
+        return by_guard
+    form = await _form(request)
+    values = _parse(config_manager.config, form)
+    config_manager.config.update(**values)
+    config_manager.save()
+    jieba.load_userdict(config_manager.config.dictionary)
+    return _back('/LittlePaimon/admin/chat', '全局配置已保存')
+
+
+@router.post('/LittlePaimon/admin/chat/group/{group_id}')
+async def chat_group_post(request: Request, group_id: int):
+    if by_guard := guard(request):
+        return by_guard
+    form = await _form(request)
+    cfg = config_manager.get_group_config(group_id)
+    values = _parse(cfg, form, percent_fields=(
+        'break_probability', 'speak_continuously_probability', 'speak_poke_probability'))
+    cfg.update(**values)
+    config_manager.save()
+    return _back(f'/LittlePaimon/admin/chat/group/{group_id}', '群配置已保存')
+
+
+@router.get('/LittlePaimon/admin/chat/messages', response_class=HTMLResponse)
+async def chat_messages_get(request: Request):
+    if by_guard := guard(request):
+        return by_guard
+    return render(await chat_messages_page(notice(request)))
+
+
+@router.get('/LittlePaimon/admin/chat/messages/page/{page}', response_class=HTMLResponse)
+async def chat_messages_page_get(request: Request, page: int):
+    if by_guard := guard(request):
+        return by_guard
+    return render(await chat_messages_page(notice(request), page))
+
+
+@router.get('/LittlePaimon/admin/chat/contexts', response_class=HTMLResponse)
+async def chat_contexts_get(request: Request):
+    if by_guard := guard(request):
+        return by_guard
+    return render(await chat_contexts_page(notice(request)))
+
+
+@router.get('/LittlePaimon/admin/chat/contexts/page/{page}', response_class=HTMLResponse)
+async def chat_contexts_page_get(request: Request, page: int):
+    if by_guard := guard(request):
+        return by_guard
+    return render(await chat_contexts_page(notice(request), page))
+
+
+@router.get('/LittlePaimon/admin/chat/answers', response_class=HTMLResponse)
+async def chat_answers_get(request: Request):
+    if by_guard := guard(request):
+        return by_guard
+    return render(await chat_answers_page(notice(request)))
+
+
+@router.get('/LittlePaimon/admin/chat/answers/page/{page}', response_class=HTMLResponse)
+async def chat_answers_page_get(request: Request, page: int):
+    if by_guard := guard(request):
+        return by_guard
+    return render(await chat_answers_page(notice(request), page))
+
+
+@router.get('/LittlePaimon/admin/chat/blacklist', response_class=HTMLResponse)
+async def chat_blacklist_get(request: Request):
+    if by_guard := guard(request):
+        return by_guard
+    return render(await chat_blacklist_page(notice(request)))
+
+
+@router.get('/LittlePaimon/admin/chat/blacklist/page/{page}', response_class=HTMLResponse)
+async def chat_blacklist_page_get(request: Request, page: int):
+    if by_guard := guard(request):
+        return by_guard
+    return render(await chat_blacklist_page(notice(request), page))
+
+
+def _page_url(base: str, page: int) -> str:
+    return f'{base}/page/{page}' if page and page > 1 else base
+
+
+@router.post('/LittlePaimon/admin/chat/delete')
+async def chat_delete(request: Request):
+    if by_guard := guard(request):
+        return by_guard
+    form = await _form(request)
+    kind = form.get('type', '')
+    id_ = int(form.get('id') or 0)
+    page = int(form.get('page') or 1)
+    page_map = {'message': 'messages', 'context': 'contexts', 'answer': 'answers',
+                'blacklist': 'blacklist'}
+    try:
+        if kind == 'message':
+            await ChatMessage.filter(id=id_).delete()
+        elif kind == 'context':
+            context = await ChatContext.get_or_none(id=id_)
+            if context:
+                await ChatAnswer.filter(context=context).delete()
+                await context.delete()
+        elif kind == 'answer':
+            await ChatAnswer.filter(id=id_).delete()
+        elif kind == 'blacklist':
+            await ChatBlackList.filter(id=id_).delete()
+        base = f'/LittlePaimon/admin/chat/{page_map.get(kind, "messages")}'
+        return _back(_page_url(base, page), '删除成功')
+    except Exception as exc:
+        return _back('/LittlePaimon/admin/chat', f'删除失败：{exc}', 'danger')
+
+
+@router.post('/LittlePaimon/admin/chat/ban')
+async def chat_ban(request: Request):
+    if by_guard := guard(request):
+        return by_guard
+    form = await _form(request)
+    kind = form.get('type', '')
+    id_ = int(form.get('id') or 0)
+    page = int(form.get('page') or 1)
+    try:
+        from .handler import LearningChat
+
+        data = await ChatMessage.get_or_none(id=id_) if kind == 'message' else \
+            await ChatContext.get_or_none(id=id_) if kind == 'context' else \
+            await ChatAnswer.get_or_none(id=id_)
+        if data:
+            await LearningChat.add_ban(data)
+        return _back(_page_url('/LittlePaimon/admin/chat/contexts', page), '已禁用')
+    except Exception as exc:
+        return _back('/LittlePaimon/admin/chat', f'禁用失败：{exc}', 'danger')
+
+
+PageRouter.include_router(router)

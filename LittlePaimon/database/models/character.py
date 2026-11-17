@@ -77,7 +77,7 @@ class CharacterProperty(BaseModel):
     dmg_bonus: Dict[Literal['火', '水', '冰', '雷', '风', '岩', '草', '物理'], float]
     """物理和元素伤害加成"""
     reaction_coefficient: Optional[
-        Dict[Literal['蒸发', '融化', '超载', '燃烧', '冻结', '感电', '绽放', '超导', '激化', '扩散', '结晶'], float]]
+        Dict[Literal['蒸发', '融化', '超载', '燃烧', '冻结', '感电', '绽放', '超导', '激化', '扩散', '结晶'], float]] = None
     """反应加成系数"""
 
     @property
@@ -104,17 +104,17 @@ class Weapon(BaseModel):
     """武器类型"""
     level: int
     """武器等级"""
-    rarity: Optional[int]
+    rarity: Optional[int] = None
     """武器星级"""
-    promote_level: Optional[int]
+    promote_level: Optional[int] = None
     """突破等级"""
-    affix_level: Optional[int]
+    affix_level: Optional[int] = None
     """精炼等级"""
-    icon: Optional[str]
+    icon: Optional[str] = None
     """武器图标"""
-    base_attack: Optional[int]
+    base_attack: Optional[int] = None
     """基础攻击力"""
-    extra_prop: Optional[EquipProperty]
+    extra_prop: Optional[EquipProperty] = None
     """额外属性"""
 
 
@@ -126,15 +126,15 @@ class Artifact(BaseModel):
     """圣遗物等级"""
     rarity: int
     """圣遗物星级"""
-    part: Optional[str]
+    part: Optional[str] = None
     """部位"""
-    suit: Optional[str]
+    suit: Optional[str] = None
     """所属套装"""
     icon: str
     """图标"""
-    main_property: Optional[EquipProperty]
+    main_property: Optional[EquipProperty] = None
     """主属性"""
-    prop_list: Optional[List[EquipProperty]]
+    prop_list: Optional[List[EquipProperty]] = None
     """副词条"""
 
 
@@ -265,17 +265,15 @@ class Character(Model):
     """元素"""
     region: RegionType = fields.CharField(max_length=4, null=True)
     """所属地区"""
-    talents: Optional[Talents] = fields.JSONField(encoder=Talents.json, decoder=Talents.parse_raw, null=True)
+    talents: Optional[Talents] = fields.JSONField(field_type=Talents, null=True)
     """天赋"""
-    constellation: Optional[Constellations] = fields.JSONField(encoder=Constellations.json,
-                                                               decoder=Constellations.parse_raw, null=True)
+    constellation: Optional[Constellations] = fields.JSONField(field_type=Constellations, null=True)
     """命之座"""
-    weapon: Optional[Weapon] = fields.JSONField(encoder=Weapon.json, decoder=Weapon.parse_raw, null=True)
+    weapon: Optional[Weapon] = fields.JSONField(field_type=Weapon, null=True)
     """武器"""
-    artifacts: Optional[Artifacts] = fields.JSONField(encoder=Artifacts.json, decoder=Artifacts.parse_raw, null=True)
+    artifacts: Optional[Artifacts] = fields.JSONField(field_type=Artifacts, null=True)
     """圣遗物"""
-    prop: Optional[CharacterProperty] = fields.JSONField(encoder=CharacterProperty.json,
-                                                         decoder=CharacterProperty.parse_raw, null=True)
+    prop: Optional[CharacterProperty] = fields.JSONField(field_type=CharacterProperty, null=True)
     """属性"""
     data_source: DataSourceType = fields.CharField(max_length=6, null=True)
     """数据来源"""

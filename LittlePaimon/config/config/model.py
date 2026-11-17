@@ -1,9 +1,11 @@
 from typing import Literal, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ConfigModel(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra='ignore')
+
     CookieWeb_enable: bool = Field(True, alias='启用CookieWeb')
     CookieWeb_url: str = Field('http://127.0.0.1:13579/LittlePaimon/cookie', alias='CookieWeb地址')
     qrcode_bind_use_url: bool = Field(False, alias='绑定二维码以链接形式发送')
@@ -47,7 +49,7 @@ class ConfigModel(BaseModel):
     admin_enable: bool = Field(True, alias='启用Web端')
     admin_password: str = Field('admin', alias='Web端管理员密码')
     secret_key: str = Field('49c294d32f69b732ef6447c18379451ce1738922a75cd1d4812ef150318a2ed0', alias='Web端token密钥')
-    admin_theme: Literal['default', 'antd', 'ang', 'dark'] = Field('default', alias='Web端主题')
+    admin_theme: str = Field('morandi-green', alias='Web端主题')
 
     command_alias_enable: bool = Field(True, alias='启用命令别名')
     browser_type: Literal['chromium', 'firefox', 'webkit'] = Field('firefox', alias='浏览器内核')
@@ -59,11 +61,11 @@ class ConfigModel(BaseModel):
 
     @property
     def alias_dict(self):
-        return {v.alias: k for k, v in self.__fields__.items()}
+        return {v.alias: k for k, v in type(self).model_fields.items()}
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
-            if key in self.__fields__:
+            if key in type(self).model_fields:
                 self.__setattr__(key, value)
             elif key in self.alias_dict:
                 self.__setattr__(self.alias_dict[key], value)

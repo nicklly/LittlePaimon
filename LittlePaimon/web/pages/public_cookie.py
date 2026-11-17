@@ -1,38 +1,130 @@
-from amis import Page, PageSchema, ActionType, LevelEnum, Dialog, Form, Textarea, TableCRUD, TableColumn, \
-    ColumnOperation
-from .constants import status_map, status_filter
+"""公共 Cookie 管理页面（添加使用 Bootstrap Modal）。"""
+from __future__ import annotations
 
-add_button = ActionType.Dialog(label='添加公共Cookie',
-                               level=LevelEnum.primary,
-                               dialog=Dialog(title='添加公共Cookie',
-                                             body=Form(
-                                                 api='post:/LittlePaimon/api/add_cookie?cookie_type=public&force=false',
-                                                 body=[Textarea(name='cookie', label='Cookie', required=True,
-                                                                showCounter=False)])))
-add_button_force = ActionType.Dialog(label='强制添加公共Cookie',
-                                     level=LevelEnum.warning,
-                                     confirmText='强制添加公共Cookie不会对Cookie有效性进行校验，如果你不确定是否正确有效，请不要强制添加。',
-                                     dialog=Dialog(title='强制添加公共Cookie',
-                                                   body=Form(
-                                                       api='post:/LittlePaimon/api/add_cookie?cookie_type=public&force=true',
-                                                       body=[
-                                                           Textarea(name='cookie', label='Cookie', required=True,
-                                                                    showCounter=False)])))
-set_button = ActionType.Ajax(label='${status == 3 ? "恢复使用" : "暂停使用"}', level=LevelEnum.warning,
-                             confirmText='将该公共Cookie设为${status == 3 ? "恢复使用？恢复后该Cookie将回到可用状态" : "暂停使用？暂停后在查询时将不使用该Cookie"}',
-                             api='post:/LittlePaimon/api/set_public_cookie?id=${id}')
-delete_button = ActionType.Ajax(label='删除', level=LevelEnum.danger,
-                                confirmText='确认删除该公共Cookie',
-                                api='delete:/LittlePaimon/api/delete_cookie?cookie_type=public&id=${id}')
-table = TableCRUD(mode='table',
-                  title='',
-                  syncLocation=False,
-                  api='/LittlePaimon/api/get_public_cookies',
-                  columns=[TableColumn(label='ID', name='id', width='8%'),
-                           TableColumn(label='Cookie', name='cookie', width='64%'),
-                           TableColumn(type='mapping', label='状态', name='status', filterable=status_filter,
-                                       map=status_map, width='12%'),
-                           ColumnOperation(label='操作', buttons=[set_button, delete_button], width='16%')],
-                  headerToolbar=[add_button, add_button_force])
-page = PageSchema(label='公共Cookie', icon='fa fa-key', url='/cookie/public',
-                  schema=Page(title='公共Cookie', body=table))
+from html import escape as html_escape
+from typing import Any, Dict, List, Optional
+
+from bootstrap_ui import (Alert, Badge, Card, Checkbox, Form, Modal, Paragraph, Span,
+                          Table, TableColumn, Textarea, field, raw)
+
+from ..ui import layout
+from .constants import status_map
+
+COLORS = {0: 'danger', 1: 'success', 2: 'warning', 3: 'secondary'}
+ADD_MODAL = 'modal-public-add'
+
+
+def status_badge(status: Any) -> Badge:
+    return Badge(text=status_map.get(status, '未知'), color=COLORS.get(status, 'secondary'))
+
+
+def cookie_tabs(active: str) -> Any:
+    """公共 / 私人 Cookie 子导航。"""
+    items = [
+        ('public', '公共 Cookie', 'fa-solid fa-globe', '/LittlePaimon/admin/cookies/public'),
+        ('private', '私人 Cookie', 'fa-solid fa-user', '/LittlePaimon/admin/cookies/private'),
+    ]
+    links = ''.join(
+        f'<a class="cookie-tab{" active" if key == active else ""}" href="{href}">'
+        f'<i class="{icon}"></i><span>{label}</span></a>'
+        for key, label, icon, href in items
+    )
+    return raw(f'<div class="cookie-tabs">{links}</div>')
+
+
+def _cookie_text(cookie: str, limit: int = 90) -> str:
+    if len(cookie) <= limit:
+        return cookie
+    return cookie[:limit] + '…'
+
+
+def button_html(icon: str, text: str, color: str = 'primary', *, modal: Optional[str] = None,
+                href: Optional[str] = None, outline: bool = False, title: str = '') -> str:
+    """带 font-awesome 图标的小按钮（返回 HTML 字符串）。"""
+    classes = f'btn btn-sm btn-{"outline-" if outline else ""}{color}'
+    attrs = f' title="{html_escape(title)}"' if title else ''
+    label = f'<i class="{icon} me-1"></i>{html_escape(text)}' if text else f'<i class="{icon}"></i>'
+    if modal:
+        return (f'<button type="button" class="{classes}"{attrs} data-bs-toggle="modal" '
+                f'data-bs-target="#{modal}">{label}</button>')
+    if href:
+        return f'<a class="{classes}"{attrs} href="{html_escape(href)}">{label}</a>'
+    return f'<button type="submit" class="{classes}"{attrs}>{label}</button>'
+
+
+def icon_button(*args, **kwargs) -> Any:
+    return raw(button_html(*args, **kwargs))
+
+
+def action_form(action: str, fields: Dict[str, Any], button: str,
+                confirm: Optional[str] = None) -> Any:
+    """表格行内的迷你表单（提交按钮用 ``button_html`` 生成）。"""
+    hidden = ''.join(
+        f'<input type="hidden" name="{html_escape(str(key))}" value="{html_escape(str(value))}">'
+        for key, value in fields.items()
+    )
+    onsubmit = f' onsubmit="return confirm(\'{html_escape(confirm)}\')"' if confirm else ''
+    return raw(f'<form method="post" action="{action}" class="d-inline"{onsubmit}>{hidden}{button}</form>')
+
+
+def public_cookie_page(cookies: List[Any], notice: Optional[tuple] = None) -> object:
+    body = [cookie_tabs('public')]
+
+    rows = []
+    for cookie in cookies:
+        running = cookie.status != 3
+        set_form = action_form(
+            '/LittlePaimon/admin/cookies/public/set', {'id': cookie.id},
+            button_html('fa-solid fa-pause' if running else 'fa-solid fa-play',
+                        '暂停' if running else '恢复', 'warning', outline=True),
+        )
+        delete_form = action_form(
+            '/LittlePaimon/admin/cookies/public/delete', {'id': cookie.id},
+            button_html('fa-regular fa-trash-can', '删除', 'danger', outline=True),
+            confirm='确认删除该公共 Cookie？',
+        )
+        rows.append({
+            'id': cookie.id,
+            'cookie': _cookie_text(cookie.cookie or ''),
+            'status': status_badge(cookie.status),
+            'actions': Span(body=[set_form, delete_form], class_name='d-inline-flex gap-1'),
+        })
+
+    body.append(Card(title='公共 Cookie', body=[
+        Paragraph(muted=True, class_name='small mb-3',
+                  text='公共 Cookie 会在所有用户查询时轮流使用；添加时会校验有效性。'),
+        Paragraph(class_name='mb-3', body=[
+            icon_button('fa-solid fa-plus', '添加 Cookie', 'primary', modal=ADD_MODAL),
+        ]),
+        Table(
+            columns=[
+                TableColumn(label='ID', key='id'),
+                TableColumn(label='Cookie', key='cookie'),
+                TableColumn(label='状态', key='status', align='center'),
+                TableColumn(label='操作', key='actions', nowrap=True),
+            ],
+            rows=rows,
+            hover=True,
+            empty_text='暂无公共 Cookie',
+        ),
+    ]))
+
+    body.append(Modal(
+        id=ADD_MODAL,
+        scrollable=True,
+        title='添加公共 Cookie',
+        body=[
+            Form(
+                method='post', action='/LittlePaimon/admin/cookies/public/add',
+                submit_label='添加',
+                body=[
+                    field('Cookie', Textarea(name='cookie', rows=5, required=True,
+                                             placeholder='粘贴完整的 Cookie 字符串')),
+                    field('跳过有效性校验', Checkbox(name='force', switch=True),
+                          help='强制添加不会校验 Cookie 是否有效，请确认无误后再使用'),
+                ],
+            ),
+        ],
+    ))
+
+    return layout('公共 Cookie', body, active='/LittlePaimon/admin/cookies', toast=notice)

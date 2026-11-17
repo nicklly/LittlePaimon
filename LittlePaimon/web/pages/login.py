@@ -1,68 +1,61 @@
+"""登录页（按效果图重新设计布局）。"""
+from __future__ import annotations
+
+from html import escape as html_escape
+from typing import Optional
+
+from bootstrap_ui import Alert, Card, Form, Input, raw
+
 from LittlePaimon.utils import __version__
-from amis import (
-    Form,
-    InputText,
-    InputPassword,
-    DisplayModeEnum,
-    Horizontal,
-    Remark,
-    Html,
-    Page,
-    AmisAPI,
-    Wrapper,
-)
 
-logo = Html(
-    html=f'''
-<p align="center">
-    <a href="https://github.com/CMHopeSunshine/LittlePaimon/">
-        <img src="https://s1.ax1x.com/2023/02/05/pS62DJK.png"
-         width="256" height="256" alt="LittlePaimon">
-    </a>
-</p>
-<h1 align="center">LittlePaimon 控制台 V{__version__}</h1>
-<div align="center">
-    <a href="https://github.com/CMHopeSunshine/LittlePaimon" target="_blank">
-    Github仓库</a> &nbsp; · &nbsp;
-    <a href="https://docs.paimon.cherishmoon.fun/"
-     target="_blank">文档</a>
-</div>
-<br>
-<br>
-'''
-)
-login_api = AmisAPI(
-    url='/LittlePaimon/api/login',
-    method='post',
-    adaptor='''
-        if (payload.status == 0) {
-            localStorage.setItem("token", payload.data.token);
-        }
-        return payload;
-    ''',
-)
+from ..ui import layout
 
-login_form = Form(
-    api=login_api,
-    title='',
-    body=[
-        InputText(
-            name='user_id',
-            label='用户ID',
-            labelRemark=Remark(shape='circle', content='超级用户的QQ号，在.env.prod文件中配置'),
+LOGO = 'https://s1.ax1x.com/2023/02/05/pS62DJK.png'
+GITHUB_URL = 'https://github.com/CMHopeSunshine/LittlePaimon'
+DOCS_URL = 'https://docs.paimon.cherishmoon.top'
+
+USER_ID_TIP = '超级管理员的 QQ 号，在 .env.prod 的 SUPERUSERS 中配置'
+PASSWORD_TIP = '在「配置项管理 - Web端配置」的「Web端管理员密码」中查看或修改'
+
+
+def _label(text: str, tip: str) -> object:
+    return raw(
+        f'<div class="login-label">{html_escape(text)}<span class="req">*</span>'
+        f'<span class="help-icon" data-bs-toggle="tooltip" data-bs-placement="top" '
+        f'title="{html_escape(tip)}"><i class="fa-solid fa-circle-question"></i></span></div>'
+    )
+
+
+def login_page(error: Optional[str] = None) -> object:
+    body = []
+    if error:
+        body.append(Alert(color='danger', body=[error]))
+
+    body.append(Card(class_name='login-card', body=[
+        raw(f'<div class="login-avatar"><img src="{LOGO}" alt="LittlePaimon"></div>'),
+        raw('<div class="login-title">LittlePaimon 控制台</div>'),
+        raw(f'<div class="login-version">v{__version__}</div>'),
+        Form(
+            action='/LittlePaimon/login',
+            method='post',
+            submit_label=None,
+            body=[
+                _label('用户ID', USER_ID_TIP),
+                Input(name='user_id', required=True, placeholder='请输入用户ID',
+                      class_name='login-input'),
+                _label('密码', PASSWORD_TIP),
+                Input(name='password', type='password', required=True,
+                      placeholder='请输入管理员密码', class_name='login-input'),
+                raw('<button class="login-btn" type="submit">登录</button>'),
+                raw(
+                    '<div class="login-footer">'
+                    f'<a href="{GITHUB_URL}" target="_blank" rel="noopener">'
+                    '<i class="fa-brands fa-github"></i>Github仓库</a>'
+                    f'<a href="{DOCS_URL}" target="_blank" rel="noopener">'
+                    '<i class="fa-solid fa-book"></i>文档</a>'
+                    '</div>'
+                ),
+            ],
         ),
-        InputPassword(
-            name='password',
-            label='密码',
-            labelRemark=Remark(
-                shape='circle', content='默认为admin，可以在paimon_config.json中修改'
-            ),
-        ),
-        # Switch(name='is_admin', label='身份组', onText='管理员', offText='用户', labelRemark=Remark(shape='circle', content='是否以管理员身份登录'))
-    ],
-    mode=DisplayModeEnum.horizontal,
-    horizontal=Horizontal(left=3, right=9, offset=5),
-    redirect='/LittlePaimon/admin',
-)
-body = Wrapper(className='w-2/5 mx-auto my-0 m:w-full', body=login_form)
-login_page = Page(title='', body=[logo, body])
+    ]))
+    return layout('登录', body, auth=True)

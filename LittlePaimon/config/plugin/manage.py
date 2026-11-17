@@ -31,7 +31,7 @@ class PluginManager:
     for file in PLUGIN_CONFIG.iterdir():
         if file.is_file() and file.name.endswith('.yml'):
             data = load_yaml(file)
-            plugins[file.name.replace('.yml', '')] = PluginInfo.parse_obj(data)
+            plugins[file.name.replace('.yml', '')] = PluginInfo.model_validate(data)
     # ------临时删除------
     if plugins.get('Paimon_Wiki'):
         plugins['Paimon_Wiki'].matchers = [matcher for matcher in plugins['Paimon_Wiki'].matchers
@@ -48,7 +48,7 @@ class PluginManager:
         保存数据
         """
         for name, plugin in cls.plugins.items():
-            save_yaml(plugin.dict(exclude={'status'}), PLUGIN_CONFIG / f'{name}.yml')
+            save_yaml(plugin.model_dump(exclude={'status'}), PLUGIN_CONFIG / f'{name}.yml')
 
     @classmethod
     async def init(cls):
@@ -71,7 +71,7 @@ class PluginManager:
             if plugin.name not in HIDDEN_PLUGINS:
                 if plugin.name not in cls.plugins:
                     if metadata := plugin.metadata:
-                        cls.plugins[plugin.name] = PluginInfo.parse_obj({
+                        cls.plugins[plugin.name] = PluginInfo.model_validate({
                             'name':        metadata.name,
                             'module_name': plugin.name,
                             'description': metadata.description,
@@ -88,7 +88,7 @@ class PluginManager:
                 for matcher in matchers:
                     if matcher._default_state:
                         with contextlib.suppress(Exception):
-                            matcher_info = MatcherInfo.parse_obj(matcher._default_state)
+                            matcher_info = MatcherInfo.model_validate(matcher._default_state)
                             if matcher_info.pm_name not in [m.pm_name for m in cls.plugins[plugin.name].matchers]:
                                 cls.plugins[plugin.name].matchers.append(matcher_info)
         cls.save()

@@ -3,7 +3,8 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from nonebot import get_driver
 from nonebot.log import LoguruHandler, logger
-from pydantic import Field, BaseSettings
+from pydantic import ConfigDict, Field
+from pydantic_settings import BaseSettings
 
 
 class Config(BaseSettings):
@@ -13,13 +14,12 @@ class Config(BaseSettings):
         default_factory=lambda: {"apscheduler.timezone": "Asia/Shanghai"}
     )
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 
 driver = get_driver()
 global_config = driver.config
-plugin_config = Config(**global_config.dict())
+plugin_config = Config(**global_config.model_dump())
 
 scheduler = AsyncIOScheduler()
 scheduler.configure(plugin_config.apscheduler_config)
