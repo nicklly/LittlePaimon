@@ -32,14 +32,33 @@ SIGN_REWARD_API = 'https://api-takumi.mihoyo.com/event/luna/home'
 SIGN_ACTION_API = 'https://api-takumi.mihoyo.com/event/luna/sign'
 AUTHKEY_API = 'https://api-takumi.mihoyo.com/binding/api/genAuthKey'
 STOKEN_API = 'https://api-takumi.mihoyo.com/auth/api/getMultiTokenByLoginTicket'
-COOKIE_TOKEN_API = 'https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken'
 SCAN_STATUS_API = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/scanQRLogin'
 CONFIRM_STATUS_API = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/confirmQRLogin'
 LOGIN_TICKET_INFO_API = 'https://webapi.account.mihoyo.com/Api/cookie_accountinfo_by_loginticket'
 WIDGET_URL = 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/aapi/widget/v2?game_id=2'
 GET_EXT_LIST_URL = "https://public-data-api.mihoyo.com/device-fp/api/getExtList"
 GET_FP_URL = 'https://public-data-api.mihoyo.com/device-fp/api/getFp'
-BBS_VERSION = '2.109.0'
+BBS_VERSION = '2.119.0'
+
+# DataSign salt（对齐 Snap.Hutao.Remastered SaltConstants / HoyolabOptions）
+DS_SALT_X4 = 'xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs'
+DS_SALT_X6 = 't0qEgfub6cvueAPgR5m9aQWWVciEer7v'
+DS_SALT_K2 = '24cf11fb14a84f0683e7cadf7c788ba2'
+DS_SALT_LK2 = '8fb73233f73e200aa1f818b5705d4442'
+# Hutao: 原 PROD salt 迁移为 Passport salt
+DS_SALT_PASSPORT = 'JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS'
+
+SALTS = {
+    'PROD': DS_SALT_X6,
+    'X4': DS_SALT_X4,
+    'X6': DS_SALT_X6,
+    'K2': DS_SALT_K2,
+    'LK2': DS_SALT_LK2,
+    'Passport': DS_SALT_PASSPORT,
+}
+
+# 扫码登录（ma-cn-passport）专用 salt，与 Hutao 的 Passport salt 不同，保持原值
+QR_LOGIN_DS_SALT = 'dDIQHbKOdaPaLuvQKVzUzqdeCaxjtaPV'
 
 
 def md5(text: str) -> str:
@@ -82,7 +101,7 @@ def get_ds(q: str = '', b: dict = None) -> str:
     br = json.dumps(b) if b else ''
     t = str(int(time.time()))
     r = ''.join(random.choices(chars, k=6))
-    c = md5(f'salt=dDIQHbKOdaPaLuvQKVzUzqdeCaxjtaPV&t={t}&r={r}&b={br}&q={q}')
+    c = md5(f'salt={QR_LOGIN_DS_SALT}&t={t}&r={r}&b={br}&q={q}')
     return f'{t},{r},{c}'
 
 def get_ds_x4(q: str = '', b: dict = None) -> str:
@@ -96,7 +115,7 @@ def get_ds_x4(q: str = '', b: dict = None) -> str:
 
     t = str(int(time.time()))
     r = str(random.randint(100000, 200000))
-    c = md5(f'salt=xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs&t={t}&r={r}&b={br}&q={q}')
+    c = md5(f'salt={SALTS["X4"]}&t={t}&r={r}&b={br}&q={q}')
     return f'{t},{r},{c}'
 
 def get_ds_x6(q: str = '', b: str = None) -> str:
@@ -109,21 +128,19 @@ def get_ds_x6(q: str = '', b: str = None) -> str:
     br = json.dumps(b) if b else ''
     t = str(int(time.time()))
     r = str(random.randint(100001, 200000))
-    c = md5(f'salt=t0qEgfub6cvueAPgR5m9aQWWVciEer7v&t={t}&r={r}&b={br}&q={q}')
+    c = md5(f'salt={SALTS["X6"]}&t={t}&r={r}&b={br}&q={q}')
     return f'{t},{r},{c}'
 
 def get_old_version_ds(web: bool = False) -> str:
     """
-    生成米游社旧版本headers的ds_token
+    生成 Gen1 DS（不含 body/query）
+
+    - web=True：genAuthKey 等 webview 接口，使用 LK2 salt
+    - web=False：SToken 绑定 / 米游社旧接口，使用 K2 salt
     """
-    if web:
-        # s = 'G1ktdwFL4IyGkHuuWSmz0wUe9Db9scyK'.
-        s = 'd9200c846b10886e8c874fc33c8f308b'
-    else:
-        # s = 'idMMaGYmVgPzh3wxmWudUXKUPGidO7GM'
-        s = '47f15f1b66bee46b816115d8e8e6ebb6'
+    s = SALTS['LK2'] if web else SALTS['K2']
     t = str(int(time.time()))
-    r = ''.join(random.sample(string.ascii_lowercase + string.digits, 6))
+    r = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
     c = md5(f"salt={s}&t={t}&r={r}")
     return f"{t},{r},{c}"
 
@@ -753,26 +770,31 @@ async def get_stoken_by_login_ticket(login_ticket: str, mys_id: str) -> Optional
     return None
 
 
-async def get_cookie_token_by_stoken(stoken: str, mys_id: str) -> Optional[str]:
-    with contextlib.suppress(Exception):
-        data = await aiorequests.get(
-            COOKIE_TOKEN_API,
-            headers = {
-                'x-rpc-app_version':        BBS_VERSION,
-                'User-Agent':               'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) miHoYoBBS/2.60.1',
-                'x-rpc-client_type':        '5',
-                'Referer':                  'https://webstatic.mihoyo.com/',
-                'Origin':                   'https://webstatic.mihoyo.com',
-                'Cookie':                   f'stuid={mys_id};stoken={stoken}',
-            },
-            params = {
-                'uid':      mys_id,
-                'stoken':   stoken
-            },
-        )
-        data = data.json()
-        return data['data']['cookie_token']
-    return None
+# ---------------------------------------------------------------------------
+# 旧版 SToken -> CookieToken（GET /account/auth/api/getCookieAccountInfoBySToken）
+# Hutao 已改用 POST /account/ma-cn-session/app/exchange，
+# 新实现见 LittlePaimon.utils.passport.get_cookie_token_by_stoken
+# ---------------------------------------------------------------------------
+# async def get_cookie_token_by_stoken(stoken: str, mys_id: str) -> Optional[str]:
+#     with contextlib.suppress(Exception):
+#         data = await aiorequests.get(
+#             COOKIE_TOKEN_API,
+#             headers = {
+#                 'x-rpc-app_version':        BBS_VERSION,
+#                 'User-Agent':               'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) miHoYoBBS/2.60.1',
+#                 'x-rpc-client_type':        '5',
+#                 'Referer':                  'https://webstatic.mihoyo.com/',
+#                 'Origin':                   'https://webstatic.mihoyo.com',
+#                 'Cookie':                   f'stuid={mys_id};stoken={stoken}',
+#             },
+#             params = {
+#                 'uid':      mys_id,
+#                 'stoken':   stoken
+#             },
+#         )
+#         data = data.json()
+#         return data['data']['cookie_token']
+#     return None
 
 
 async def get_authkey_by_stoken(

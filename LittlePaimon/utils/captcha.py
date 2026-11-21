@@ -9,7 +9,6 @@ from LittlePaimon.utils.logger import logger
 from LittlePaimon.utils.requests import aiorequests
 
 # 验证码
-BBS_VERSION = '2.109.0'
 RECORD_CAPTCHA = 'https://api-takumi-record.mihoyo.com/game_record/app/card/wapi/createVerification?is_high=true'
 RECORD_CAPTCHA_VERIFY = 'https://api-takumi-record.mihoyo.com/game_record/app/card/wapi/verifyVerification'
 BBS_CAPTCHA = 'https://bbs-api.miyoushe.com/misc/api/createVerification?is_high=true'
@@ -18,6 +17,7 @@ BBS_CAPTCHA_VERIFY = 'https://bbs-api.miyoushe.com/misc/api/verifyVerification'
 rr = load_yaml(Path() / 'config' / 'rrocr.yml')
 
 def record_captcha(ds: str, cookie_info: str, devices: Devices) -> dict:
+    from LittlePaimon.utils.api import BBS_VERSION
     return {
         'DS':                       ds,
         'cookie':                   cookie_info,
@@ -32,7 +32,7 @@ def record_captcha(ds: str, cookie_info: str, devices: Devices) -> dict:
     }
 
 def bbs_captcha(cookie_info: str, devices: Devices) -> dict:
-    from LittlePaimon.utils.api import get_old_version_ds
+    from LittlePaimon.utils.api import BBS_VERSION, get_old_version_ds
     return {
         'DS':                                   get_old_version_ds(web=False),
         'cookie':                               cookie_info,

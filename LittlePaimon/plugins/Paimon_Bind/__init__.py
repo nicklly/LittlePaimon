@@ -13,7 +13,12 @@ from LittlePaimon.config import config
 from LittlePaimon.database import LastQuery, PrivateCookie, PublicCookie, Character, PlayerInfo, DailyNoteSub, \
     MihoyoBBSSub
 from LittlePaimon.utils import logger, NICKNAME
-from LittlePaimon.utils.api import get_bind_game_info, get_stoken_by_login_ticket, get_cookie_token_by_stoken
+from LittlePaimon.utils.api import get_bind_game_info, get_stoken_by_login_ticket
+from LittlePaimon.utils.passport import (
+    build_cookie,
+    extract_mid,
+    get_cookie_token_by_stoken,
+)
 
 try:
     from .get_cookie import *
@@ -154,16 +159,21 @@ async def _(event: MessageEvent, msg: Message = CommandArg()):
         login_ticket = login_ticket_match[1] if login_ticket_match else None
         stoken_match = re.search(r'(?:stoken|stoken_v2)=([0-9a-zA-Z]+)', msg)
         stoken = stoken_match[1] if stoken_match else None
+        mid = extract_mid(msg)
         if login_ticket and not stoken:
             # 如果有login_ticket但没有stoken，就通过login_ticket获取stoken
             stoken = await get_stoken_by_login_ticket(login_ticket, mys_id)
         if stoken and not cookie_token:
-            # 如果有stoken但没有cookie_token，就通过stoken获取cookie_token
-            cookie_token = await get_cookie_token_by_stoken(stoken, mys_id)
+            # Hutao Passport v2：SToken -> CookieToken
+            cookie_token, token_err = await get_cookie_token_by_stoken(stoken, mys_id, mid)
+            if not cookie_token:
+                await ysb.finish(f'获取CookieToken失败：{token_err}', at_sender=True)
         if not cookie_token:
             await ysb.finish(
                 'Cookie无效，缺少cookie_token或login_ticket字段\n获取cookie的教程：\ndocs.qq.com/doc/DQ3JLWk1vQVllZ2Z1',
                 at_sender=True)
+        stored_cookie = build_cookie(mys_id, mid, cookie_token) if mid else f'account_id={mys_id};cookie_token={cookie_token}'
+        stored_stoken = f'stuid={mys_id};stoken={stoken};' + (f'mid={mid};' if mid else '') if stoken else None
         if game_info := await get_bind_game_info(f'account_id={mys_id};cookie_token={cookie_token}', mys_id):
             if not game_info['list']:
                 await ysb.finish('该账号尚未绑定任何游戏，请确认账号无误~', at_sender=True)
@@ -180,8 +190,8 @@ async def _(event: MessageEvent, msg: Message = CommandArg()):
                 send_msg += f'{info["nickname"]}({info["uid"]}) '
                 await PrivateCookie.update_or_create(user_id=str(event.user_id), uid=info['uid'], mys_id=mys_id,
                                                      defaults={
-                                                         'cookie': f'account_id={mys_id};cookie_token={cookie_token}',
-                                                         'stoken': f'stuid={mys_id};stoken={stoken};' if stoken else None})
+                                                         'cookie': stored_cookie,
+                                                         'stoken': stored_stoken})
             await ysb.finish(
                 f'玩家{send_msg.strip()}绑定Cookie{"和Stoken" if stoken else ""}成功{"" if stoken else "当未能绑定Stoken"}{"" if isinstance(event, PrivateMessageEvent) else "，当前非私聊对话建议将Cookie撤回哦"}',
                 at_sender=True,
@@ -299,18 +309,22 @@ async def _(event: MessageEvent, msg: Message = CommandArg()):
         login_ticket = login_ticket_match[1] if login_ticket_match else None
         stoken_match = re.search(r'(?:stoken|stoken_v2)=([0-9a-zA-Z]+)', msg)
         stoken = stoken_match[1] if stoken_match else None
+        mid = extract_mid(msg)
         if login_ticket and not stoken:
             # 如果有login_ticket但没有stoken，就通过login_ticket获取stoken
             stoken = await get_stoken_by_login_ticket(login_ticket, mys_id)
         if stoken and not cookie_token:
-            # 如果有stoken但没有cookie_token，就通过stoken获取cookie_token
-            cookie_token = await get_cookie_token_by_stoken(stoken, mys_id)
+            # Hutao Passport v2：SToken -> CookieToken
+            cookie_token, token_err = await get_cookie_token_by_stoken(stoken, mys_id, mid)
+            if not cookie_token:
+                await pck.finish(f'获取CookieToken失败：{token_err}', at_sender=True)
         if not cookie_token:
             await pck.finish(
                 'Cookie无效，缺少cookie_token或login_ticket字段\n获取cookie的教程：\ndocs.qq.com/doc/DQ3JLWk1vQVllZ2Z1',
                 at_sender=True)
+        stored_cookie = build_cookie(mys_id, mid, cookie_token) if mid else f'account_id={mys_id};cookie_token={cookie_token}'
         if await get_bind_game_info(f'account_id={mys_id};cookie_token={cookie_token}', mys_id):
-            ck = await PublicCookie.create(cookie=f'account_id={mys_id};cookie_token={cookie_token}')
+            ck = await PublicCookie.create(cookie=stored_cookie)
             logger.info('原神Cookie', f'{ck.id}号公共cookie', None, '添加成功', True)
             await pck.finish(f'成功添加{ck.id}号公共cookie', at_sender=True)
         else:
@@ -384,10 +398,16 @@ async def _(event: MessageEvent):
         for ck in cks:
             if ck.mys_id not in mys_id_done and ck.stoken is not None:
                 mys_id_done.append(ck.mys_id)
-                if new_cookie := await get_cookie_token_by_stoken(ck.stoken.split('stoken=')[-1], ck.mys_id):
+                mid = extract_mid(ck.stoken) or extract_mid(ck.cookie)
+                stoken_value = ck.stoken.split('stoken=')[-1].split(';')[0]
+                new_cookie, token_err = await get_cookie_token_by_stoken(stoken_value, ck.mys_id, mid)
+                if new_cookie:
+                    stored_cookie = build_cookie(ck.mys_id, mid, new_cookie) if mid else f'account_id={ck.mys_id};cookie_token={new_cookie}'
                     await PrivateCookie.filter(user_id=str(event.user_id), mys_id=ck.mys_id).update(
-                        cookie=f'account_id={ck.mys_id};cookie_token={new_cookie}', status=1)
+                        cookie=stored_cookie, status=1)
                     refresh_done.append(ck.mys_id)
+                else:
+                    logger.warning('原神Cookie', f'刷新米游社ID {ck.mys_id} 的Cookie失败：{token_err}')
         if not refresh_done:
             await refresh_ck.finish('刷新cookie失败，请重新绑定', at_sender=True)
         else:

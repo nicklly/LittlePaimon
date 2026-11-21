@@ -20,14 +20,18 @@ from LittlePaimon.utils import NICKNAME, logger
 from LittlePaimon.utils.qrcode import generate_qrcode
 from LittlePaimon.utils.requests import aiorequests
 from LittlePaimon.utils.scheduler import scheduler
-from LittlePaimon.utils.api import get_bind_game_info, login_permission_headers, check_qrcode_status, SCAN_STATUS_API, \
+from LittlePaimon.utils.api import login_permission_headers, check_qrcode_status, SCAN_STATUS_API, \
     CONFIRM_STATUS_API, get_Fp
+from LittlePaimon.utils.passport import (
+    build_cookie,
+    filter_genshin_roles,
+    get_cookie_token_by_stoken,
+    get_game_roles_by_stoken,
+    get_ltoken_by_stoken,
+)
 from LittlePaimon.utils.message import fullmatch_rule
 from LittlePaimon.utils.devices import DeviceProvider
 
-CN_DS_SALT = 'JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS'
-CN_DS_SALT_V2 = 'OvOIsZRXrUbXoUlpQuhEx4tgAwNVUMmp'
-BBS_VERSION = '2.90.1'
 device_id = "".join(random.choices((ascii_letters + digits), k=64))
 
 
@@ -38,14 +42,6 @@ running_login_data = {}
 
 def md5_(self) -> str:
     return md5(self.encode()).hexdigest()
-
-def get_ds(salt_version=CN_DS_SALT, body=None, query=None) -> str:
-    t = int(time.time())
-    r = ''.join(random.choices(ascii_letters, k=6))
-    b = json.dumps(body) if body else ''
-    q = '&'.join((f"{k}={v}" for k, v in sorted(query.items()))) if query else ''
-    h = md5_(f"salt={salt_version}&t={t}&r={r}&b={b}&q={q}")
-    return f"{t},{r},{h}"
 
 async def create_login_data():
     headers = login_permission_headers()
@@ -113,32 +109,6 @@ async def get_extra_cookie(tickets: str):
                 return '; '.join(f'{k}={v}' for k, v in cookies.items())
     return None
 
-
-async def get_cookie_token(aigis : str = '', data: dict = None, stoken: str = ''):
-    res = await aiorequests.get(
-        url = f"https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken?",
-        headers = {
-            'x-rpc-app_version':  f'{BBS_VERSION}',
-            'DS':                 get_ds(salt_version=CN_DS_SALT, body=data),
-            'x-rpc-aigis':        aigis,
-            'Content-Type':       'application/json',
-            'Accept':             'application/json',
-            'x-rpc-game_biz':     'bbs_cn',
-            'x-rpc-sys_version':  '12',
-            'x-rpc-device_id':    'FF8F93BE-8791-4263-AA15-F96A60CA22F6',
-            'x-rpc-device_fp':    '38d81926460a0',
-            'x-rpc-device_name':  'OPPO Find X7',
-            'x-rpc-device_model': 'PHZ110',
-            'x-rpc-app_id':       'bll8iq97cem8',
-            'x-rpc-client_type':  '2',
-            'User-Agent':         'Hyperion/550 CFNetwork/3860.500.112 Darwin/25.4.0',
-            'Cookie':             stoken
-        },
-        params = data
-    )
-    return res.json()
-
-
 qrcode_bind = on_command('原神扫码绑定', aliases={'原神扫码登录', '原神扫码登陆'}, priority=1, block=True,
                          rule=fullmatch_rule,
                          state={
@@ -196,66 +166,77 @@ async def check_qrcode():
                 game_token = status_data['data']
                 running_login_data.pop(user_id)
 
-                stoken = f"stoken={game_token['tokens'][0]['token']};stuid={game_token['user_info']['aid']};mid={game_token['user_info']['mid']};"
+                tokens = game_token.get('tokens') or []
+                stoken_token = next(
+                    (token for token in tokens if int(token.get('token_type') or 0) == 1),
+                    tokens[0] if tokens else {},
+                )
+                stoken_value = stoken_token.get('token', '')
+                aid = str(game_token['user_info']['aid'])
+                mid = str(game_token['user_info']['mid'])
+                stoken = f'stoken={stoken_value};stuid={aid};mid={mid};'
 
-                token = {
-                    'uid': int(game_token['user_info']['aid']),
-                    'mid': game_token['user_info']['mid'],
-                    'stoken': game_token['tokens'][0]['token']
-                }
+                cookie_token, cookie_token_err = await get_cookie_token_by_stoken(stoken_value, aid, mid)
+                if not cookie_token:
+                    send_msg = f'获取CookieToken失败：{cookie_token_err}'
+                else:
+                    ltoken, ltoken_err = await get_ltoken_by_stoken(stoken_value, aid, mid)
+                    if not ltoken:
+                        logger.warning('原神扫码绑定', f'➤➤ 获取LToken失败：{ltoken_err}')
 
-                cookie_token_data = await get_cookie_token(data=token, stoken=stoken)
-                mys_id = cookie_token_data['data']['uid']
-                cookie_token = cookie_token_data['data']['cookie_token']
+                    auth_cookie = f"stoken={stoken_value};mid={mid};"
+                    result = await create_extra_login_data()
+                    scan_result = await check_qrcode_status(SCAN_STATUS_API, result['ticket'], auth_cookie)
+                    confirm_result = await check_qrcode_status(CONFIRM_STATUS_API, result['ticket'], auth_cookie)
 
-                auth_cookie = f"stoken={game_token['tokens'][0]['token']};mid={game_token['user_info']['mid']};"
-                result = await create_extra_login_data()
-                scan_result = await check_qrcode_status(SCAN_STATUS_API, result['ticket'], auth_cookie)
-                confirm_result = await check_qrcode_status(CONFIRM_STATUS_API, result['ticket'], auth_cookie)
+                    if None in (scan_result, confirm_result):
+                        logger.warning('原神扫码绑定','➤➤','请求被拒绝')
 
-                if None in (scan_result, confirm_result):
-                    logger.warning('原神扫码绑定','➤➤','请求被拒绝')
+                    extra_cookie = await get_extra_cookie(result['ticket'])
 
-                extra_cookie = await get_extra_cookie(result['ticket'])
-
-                if game_info := await get_bind_game_info(f"account_id={mys_id};cookie_token={cookie_token}", mys_id):
-                    if not game_info['list']:
+                    roles, roles_err = await get_game_roles_by_stoken(stoken_value, aid, mid)
+                    if roles is None:
+                        send_msg = f'获取游戏角色失败：{roles_err}'
+                    elif not roles:
                         send_msg = '该账号尚未绑定任何游戏，请确认扫码的账号无误'
-                    elif not (genshin_games := [{'uid': game['game_role_id'], 'nickname': game['nickname']} for game in game_info['list'] if game['game_id'] == 2]):
-                        send_msg = '该账号尚未绑定原神，请确认扫码的账号无误'
                     else:
-                        send_msg = '成功绑定原神账号：'
-                        for info in genshin_games:
-                            send_msg += f'{info["nickname"]}({info["uid"]}) '
-                            devices = DeviceProvider()
-                            fingerprint = await get_Fp(info['uid'])
+                        genshin_games = filter_genshin_roles(roles)
+                        if not genshin_games:
+                            send_msg = '该账号尚未绑定原神，请确认扫码的账号无误'
+                        else:
+                            cookie = build_cookie(aid, mid, cookie_token, ltoken)
+                            send_msg = '成功绑定原神账号：'
+                            for info in genshin_games:
+                                send_msg += f'{info["nickname"]}({info["uid"]}) '
+                                devices = DeviceProvider()
+                                fingerprint = await get_Fp(info['uid'])
 
-                            await Devices.update_or_create(
+                                await Devices.update_or_create(
+                                    user_id = user_id,
+                                    uid = info['uid'],
+                                    device_id = devices.device_id(),
+                                    device_name = devices.select_variant(info['uid']).DeviceName,
+                                    device_model = devices.select_variant(info['uid']).DeviceModel,
+                                    device_fp = fingerprint,
+                                )
+                                await PrivateCookie.update_or_create(
+                                    user_id = user_id,
+                                    uid = info['uid'],
+                                    mys_id = aid,
+                                    defaults = {
+                                        'cookie': cookie,
+                                        'stoken': stoken,
+                                        'extra_cookie': extra_cookie
+                                    }
+                                )
+                            send_msg = send_msg.strip()
+                            await LastQuery.update_or_create(
                                 user_id = user_id,
-                                uid = info['uid'],
-                                device_id = devices.device_id(),
-                                device_name = devices.select_variant(info['uid']).DeviceName,
-                                device_model = devices.select_variant(info['uid']).DeviceModel,
-                                device_fp = fingerprint,
-                            )
-                            await PrivateCookie.update_or_create(
-                                user_id = user_id,
-                                uid = info['uid'],
-                                mys_id = mys_id,
                                 defaults = {
-                                    'cookie': f"account_id={mys_id};cookie_token={cookie_token}",
-                                    'stoken': stoken,
-                                    'extra_cookie': extra_cookie
+                                    'uid':       genshin_games[0]['uid'],
+                                    'last_time': datetime.datetime.now()
                                 }
                             )
-                        send_msg = send_msg.strip()
-                        await LastQuery.update_or_create(
-                            user_id = user_id,
-                            defaults = {
-                                'uid':       genshin_games[0]['uid'],
-                                'last_time': datetime.datetime.now()
-                            }
-                        )
             if send_msg:
                 bot: Bot = get_bot(str(data['bot_id']))
                 if 'group_id' in data:
