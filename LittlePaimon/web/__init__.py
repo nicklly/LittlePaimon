@@ -21,18 +21,18 @@ from html import escape
 from tortoise.queryset import Q
 
 from LittlePaimon.config import ConfigManager, PluginInfo, PluginManager
-from LittlePaimon.database import CommandAlias, PluginDisable, PrivateCookie, PublicCookie
+from LittlePaimon.database import CommandAlias, PluginDisable, PrivateCookie, PublicCookie, Devices
 from LittlePaimon.utils import DRIVER, SUPERUSERS, logger
 
 from .api import BaseApiRouter
 from .api.bot_info import bot_restart, bot_update
 from .api.cookie import (BindCookie, add_public_cookie, bind_cookie, delete_public_cookie,
-                         set_public_cookie, update_cookie)
+                         set_public_cookie, update_cookie, delete_device)
 from .api.plugin import set_plugin_bans, set_plugin_detail, set_plugin_status
 from .api.status import debug_logs, info_logs
 from .pages import (alias_page, bind_cookie_page, blank_page, config_page, home_page,
                     login_page, plugin_detail_page, plugins_page, private_cookie_page,
-                    public_cookie_page, read_env)
+                    public_cookie_page, read_env, user_devices_page)
 from .ui import (current_user, flash_redirect, guard, layout, login_response,
                  logout_response, notice, redirect, render)
 
@@ -329,6 +329,13 @@ async def private_cookies_get(request: Request):
     cookies = await PrivateCookie.all().order_by('id')
     return render(private_cookie_page(cookies, notice(request)))
 
+@PageRouter.get('/LittlePaimon/admin/cookies/device', response_class=HTMLResponse)
+async def user_devices_get(request: Request):
+    if by_guard := guard(request):
+        return by_guard
+    devices = await Devices.all().order_by('id')
+    return render(user_devices_page(devices, notice(request)))
+
 
 @PageRouter.post('/LittlePaimon/admin/cookies/private/add')
 async def private_cookies_add(request: Request):
@@ -384,6 +391,17 @@ async def private_cookies_delete(request: Request):
     msg, kind = _result_msg(result)
     return _back('/LittlePaimon/admin/cookies/private', msg, kind)
 
+@PageRouter.post('/LittlePaimon/admin/cookies/device/delete')
+async def user_devices_update(request: Request):
+    if by_guard := guard(request):
+        return by_guard
+    form = await _form(request)
+    try:
+        result = await delete_device(int(form.get('id', 0)))
+    except Exception as exc:
+        result = {'status': -1, 'msg': f'删除失败：{exc}'}
+    msg, kind = _result_msg(result)
+    return _back('/LittlePaimon/admin/cookies/device', msg, kind)
 
 # --------------------------------------------------------------------------- 配置
 

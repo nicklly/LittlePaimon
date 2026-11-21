@@ -23,6 +23,7 @@ def cookie_tabs(active: str) -> Any:
     items = [
         ('public', '公共 Cookie', 'fa-solid fa-globe', '/LittlePaimon/admin/cookies/public'),
         ('private', '私人 Cookie', 'fa-solid fa-user', '/LittlePaimon/admin/cookies/private'),
+        ('devices', '用户设备 Devices', 'fa-solid fa-mobile-screen-button', '/LittlePaimon/admin/cookies/device'),
     ]
     links = ''.join(
         f'<a class="cookie-tab{" active" if key == active else ""}" href="{href}">'
@@ -39,11 +40,13 @@ def _cookie_text(cookie: str, limit: int = 90) -> str:
 
 
 def button_html(icon: str, text: str, color: str = 'primary', *, modal: Optional[str] = None,
-                href: Optional[str] = None, outline: bool = False, title: str = '') -> str:
+                href: Optional[str] = None, outline: bool = False, title: str = '', onclick: Optional[str] = None) -> str:
     """带 font-awesome 图标的小按钮（返回 HTML 字符串）。"""
     classes = f'btn btn-sm btn-{"outline-" if outline else ""}{color}'
     attrs = f' title="{html_escape(title)}"' if title else ''
     label = f'<i class="{icon} me-1"></i>{html_escape(text)}' if text else f'<i class="{icon}"></i>'
+    if onclick:                                  # ← 新增
+        attrs += f' onclick="{html_escape(onclick)}"'
     if modal:
         return (f'<button type="button" class="{classes}"{attrs} data-bs-toggle="modal" '
                 f'data-bs-target="#{modal}">{label}</button>')

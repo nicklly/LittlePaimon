@@ -173,7 +173,7 @@ hr { border-color: var(--line); opacity: 1; }
 .app-main { flex: 1; display: flex; padding: 24px 28px; min-width: 0; }
 .app-content {
   width: 100%; max-width: 1280px;
-  display: flex; flex-direction: column; margin: 0 auto;
+  display: flex; flex-direction: column;
 }
 
 /* ------------------------- 卡片：扁平、无边框 ------------------------- */
@@ -374,6 +374,24 @@ hr { border-color: var(--line); opacity: 1; }
 .modal-body { padding: 14px 26px 4px; }
 .modal-footer { border: 0; padding: 16px 26px 24px; }
 .modal-backdrop.show { opacity: .28; }
+
+/* 模态框内表单紧凑排版，尽量避免出现内部滚动条 */
+.modal .modal-header { padding: 18px 24px 4px; }
+.modal .modal-body { padding: 10px 24px 20px; }
+.modal .modal-footer { padding: 10px 24px 18px; }
+.modal .form-label { margin-bottom: .35rem; font-size: 13px; }
+.modal .form-control, .modal .form-select {
+  padding: .45rem .7rem; font-size: 13.5px; border-radius: 10px;
+}
+.modal .mb-3 { margin-bottom: .85rem !important; }
+.modal .form-text { font-size: 11.5px; margin-top: .15rem; }
+.modal .form-check-input { margin-top: .15em; }
+.modal .row.g-3 { --bs-gutter-y: .35rem; }
+/* 保存按钮统一放到 Modal 右下角，并与底部留出间距 */
+.modal .modal-body form > .d-flex.gap-2.mt-4 {
+  justify-content: flex-end; margin-top: 1.35rem !important; margin-bottom: .45rem;
+}
+.modal .modal-body form > .d-flex.gap-2.mt-4 .btn { min-width: 86px; }
 
 /* ------------------------- 快捷操作：三等分等高卡片 ------------------------- */
 .quick-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }

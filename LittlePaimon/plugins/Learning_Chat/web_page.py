@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from bootstrap_ui import (Alert, Badge, Button, Card, Checkbox, Col, Form, Hidden, Input,
                           Paragraph, Row, Select, Span, Table, TableColumn, Textarea, field,
-                          raw)
+                          raw, overlays, Modal)
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
@@ -77,7 +77,9 @@ def _is_list(annotation: Any) -> bool:
     return typing.get_origin(annotation) in (list, List)
 
 
-def _config_form(cfg: Any, action: str, *, percent_fields=()) -> Form:
+def _config_form(cfg: Any, action: str, *, percent_fields=(), prefix: str = '',
+                 columns: int = 2) -> Form:
+    span = max(1, 12 // max(1, columns))
     children = []
     for name, info in type(cfg).model_fields.items():
         if name == 'group_config':
@@ -91,13 +93,15 @@ def _config_form(cfg: Any, action: str, *, percent_fields=()) -> Form:
             control = Input(name=name, type='number', value=value)
         elif annotation is float:
             shown = value * 100 if name in percent_fields else value
-            control = Input(name=name, type='number', step='0.01', value=shown)
+            control = Input(name=name, type='number', value=shown)
         elif _is_list(annotation):
             control = Input(name=name, value=','.join(str(item) for item in value or []),
                             placeholder='英文逗号分隔')
         else:
             control = Input(name=name, value='' if value is None else str(value))
-        children.append(Col(md=6, body=[field(label, control)]))
+        if prefix:
+            control.id = f'{prefix}-{name}'
+        children.append(Col(md=span, body=[field(label, control)]))
     return Form(action=action, method='post', submit_label='保存',
                 body=[Row(gutter=3, children=children)])
 
@@ -139,6 +143,14 @@ def _parse(cfg: Any, form: Dict[str, str], *, percent_fields=(), skip=('group_co
                 values[name] = form[name]
     return values
 
+GROUP_EDITOR_JS = """
+function openGroupEditor() {
+  var select = document.getElementById('group-select');
+  if (!select || !select.value) return;
+  var modal = document.getElementById('editor_group_' + select.value);
+  if (modal) bootstrap.Modal.getOrCreateInstance(modal).show();
+}
+"""
 
 def chat_config_page(notice_data: Optional[tuple] = None) -> object:
     cfg = config_manager.config
@@ -154,20 +166,46 @@ def chat_config_page(notice_data: Optional[tuple] = None) -> object:
     if not options:
         options = "<option value=''>暂无分群配置</option>"
     disabled = ' disabled' if not groups else ''
+
+    modals = []
+    for g in groups:
+        modals.append(Modal(
+            id=f'editor_group_{g}',
+            size='xl',
+            scrollable=True,
+            title=f'群 {g} 配置',
+            body=[
+                Paragraph(muted=True, class_name='small mb-2',
+                          text='概率类配置以百分比填写（0-100）。'),
+                _config_form(
+                    config_manager.get_group_config(g),
+                    f'/LittlePaimon/admin/chat/group/{g}',
+                    percent_fields=(
+                        'break_probability',
+                        'speak_continuously_probability',
+                        'speak_poke_probability'
+                    ),
+                    prefix=f'group-{g}',
+                    columns=3,
+                ),
+            ],
+        ))
+
     body.append(Card(class_name='mt-3', title='分群配置', body=[
         raw(
-            '<form class="d-flex flex-wrap gap-2 align-items-center" '
-            'onsubmit="location.href=\'/LittlePaimon/admin/chat/group/\' + '
-            'this.group_id.value; return false;">'
-            f'<select class="form-select" name="group_id" style="max-width:240px"{disabled}>'
+            '<div class="d-flex flex-wrap gap-2 align-items-center">'
+            f'<select id="group-select" class="form-select" name="group_id" style="max-width:240px"{disabled}>'
             f'{options}</select>'
-            f'<button class="btn btn-secondary btn-sm" type="submit"{disabled}>'
+            f'<button type="button" class="btn btn-sm btn-primary"{disabled} '
+            'onclick="openGroupEditor()"><i class="fa-solid fa-pen me-1"></i>'
             '编辑该群配置</button>'
-            '</form>'
+            '</div>'
         ),
     ]))
+    body.extend(modals)
     return layout('群聊学习', _wrap('/LittlePaimon/admin/chat', body),
-                  active='/LittlePaimon/admin/chat', toast=notice_data)
+                  active='/LittlePaimon/admin/chat', toast=notice_data,
+                  js=GROUP_EDITOR_JS)
 
 
 def chat_group_page(group_id: int, notice_data: Optional[tuple] = None) -> object:

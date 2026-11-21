@@ -94,7 +94,7 @@ def private_cookie_page(cookies: List[Any], notice: Optional[tuple] = None) -> o
                 TableColumn(label='QQ号', key='user_id'),
                 TableColumn(label='UID', key='uid'),
                 TableColumn(label='米游社ID', key='mys_id'),
-                TableColumn(label='状态', key='status', align='center'),
+                TableColumn(label='状态', key='status'),
                 TableColumn(label='操作', key='actions', nowrap=True),
             ],
             rows=rows,
